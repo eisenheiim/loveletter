@@ -70,6 +70,8 @@ function createShopierPaymentRouter({ store, fulfillPayment, resolveDraftFromPay
         payment_id: result.payment_id,
         product_id: result.product_id,
         checkout_html: result.checkout_html,
+        checkoutHtml: result.checkout_html,
+        redirect_via: result.redirect_via || 'checkout_html',
         draftId: checkoutInput.buyer_id || body.draftId || null,
       });
     } catch (err) {

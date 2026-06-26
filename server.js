@@ -290,6 +290,7 @@ app.post('/api/pay', async (req, res) => {
       payment_url: payment.payment_url,
       checkoutUrl: payment.payment_url,
       checkoutHtml: payment.checkout_html,
+      redirectVia: payment.redirect_via || 'checkout_html',
       payment_id: payment.payment_id,
       paymentTotal: getPublicConfig().priceDisplay,
     });

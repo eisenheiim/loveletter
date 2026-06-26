@@ -947,6 +947,9 @@
         if (els.checkoutBtn) {
           els.checkoutBtn.textContent = config.checkoutButton || 'Pay €1.00 & Create Surprise';
         }
+        if (config.shopSlug) {
+          appConfig.shopSlug = config.shopSlug;
+        }
 
         if (config.shopierConfigured) {
           loadShopierConnectionStatus();
@@ -1272,6 +1275,18 @@
         return formData;
       }
 
+      function isShopProfileCheckoutUrl(url) {
+        if (!url) return true;
+        try {
+          var parsed = new URL(url, window.location.origin);
+          var path = parsed.pathname.replace(/\/$/, '');
+          var slug = (appConfig.shopSlug || 'okystudio').toLowerCase();
+          return path.toLowerCase() === '/' + slug;
+        } catch {
+          return false;
+        }
+      }
+
       function openCheckoutHtml(html) {
         const win = window.open('', '_self');
         win.document.open();
@@ -1380,12 +1395,12 @@
           }
 
           var checkoutTarget = payData.payment_url || payData.checkoutUrl;
-          if (checkoutTarget) {
+          if (checkoutTarget && !isShopProfileCheckoutUrl(checkoutTarget)) {
             window.location.href = checkoutTarget;
             return;
           }
 
-          throw new Error('No checkout URL returned from server');
+          throw new Error('Shopier checkout form was not returned. Deploy the latest server code and try again.');
         } catch (err) {
           console.error('[Valentine Surprise — Checkout Error]', err);
           setCheckoutOverlayMessage('Something went wrong', err.message || 'Please try again');
