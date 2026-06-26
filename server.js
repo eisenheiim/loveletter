@@ -6,7 +6,10 @@ const fs = require('fs');
 const multer = require('multer');
 const store = require('./lib/store');
 const { generateSiteId } = require('./lib/generateId');
-const { createPaymentRequest, handleWebhook, resolveDraftFromPayment, isPaymentConfigured, ensureSharedProduct, testShopierConnection } = require('./lib/shopier');
+const { resolveDraftFromPayment, isPaymentConfigured, testShopierConnection } = require('./lib/shopier');
+const { initializePayment, buildPayloadFromDraft, ShopierApiError } = require('./lib/shopier-rest');
+const { getCheckoutPaymentTemplate } = require('./lib/mode');
+const { createShopierPaymentRouter, createShopierWebhookHandler } = require('./routes/shopierPayment');
 const { generateQrForSite, buildWhatsAppShareUrl } = require('./lib/qr');
 const { renderSurprisePage } = require('./lib/renderSurprise');
 const { getAppMode, getPublicConfig } = require('./lib/mode');
@@ -29,35 +32,34 @@ app.use((req, res, next) => {
 
 app.use('/uploads', express.static(path.join(ROOT, 'uploads')));
 
-/* Shopier PAT webhook — raw body required for signature verification */
+/* fulfillPayment is hoisted for webhook + pay routes */
+async function fulfillPayment(draftId, shopierPaymentId) {
+  const site = await store.findById(draftId);
+  if (!site) return null;
+
+  if (site.isPaid && site.qrCodePath) {
+    return site;
+  }
+
+  await store.markPaid(draftId, { shopierPaymentId });
+
+  const { relativePath } = await generateQrForSite(draftId, BASE_URL);
+  const updated = await store.updateById(draftId, { qrCodePath: relativePath });
+
+  return updated;
+}
+
+const shopierWebhookHandler = createShopierWebhookHandler({
+  store,
+  fulfillPayment,
+  resolveDraftFromPayment,
+});
+
+/* Shopier PAT webhook — raw body required for HMAC signature verification */
 app.post(
   '/api/payment/webhook',
   express.raw({ type: 'application/json' }),
-  async (req, res) => {
-    try {
-      const result = await handleWebhook(req.body, req.headers, async (info) => {
-        const { order } = info;
-        const draftId = await resolveDraftFromPayment(order, store);
-
-        if (!draftId) {
-          console.warn('[payment/webhook] Could not resolve draft for order', order?.id);
-          return;
-        }
-
-        await fulfillPayment(draftId, order.id);
-        console.log('[payment/webhook] Fulfilled draft', draftId);
-      });
-
-      return res.status(200).json({
-        received: true,
-        processed: result.processed,
-        event: result.event.type,
-      });
-    } catch (err) {
-      console.error('[payment/webhook]', err);
-      return res.status(400).json({ error: 'Webhook verification failed' });
-    }
-  }
+  shopierWebhookHandler
 );
 
 /* Legacy OSB callback — redirect users to webhook-based PAT flow */
@@ -69,6 +71,15 @@ app.post('/api/payment/callback', express.urlencoded({ extended: false }), (_req
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+app.use(
+  '/api/payment',
+  createShopierPaymentRouter({
+    store,
+    fulfillPayment,
+    resolveDraftFromPayment,
+  })
+);
 
 /* ─── Multer: image uploads tied to generated draft id ─── */
 function createImageUploader() {
@@ -102,22 +113,7 @@ function assignDraftId(req, _res, next) {
   next();
 }
 
-/* ─── Payment fulfillment (idempotent) ─── */
-async function fulfillPayment(draftId, shopierPaymentId) {
-  const site = await store.findById(draftId);
-  if (!site) return null;
-
-  if (site.isPaid && site.qrCodePath) {
-    return site;
-  }
-
-  await store.markPaid(draftId, { shopierPaymentId });
-
-  const { relativePath } = await generateQrForSite(draftId, BASE_URL);
-  const updated = await store.updateById(draftId, { qrCodePath: relativePath });
-
-  return updated;
-}
+/* ─── Payment fulfillment (idempotent) — see fulfillPayment above ─── */
 
 /* ═══════════════════════════════════════ */
 /* API ROUTES                              */
@@ -203,11 +199,13 @@ app.post(
 );
 
 /**
- * POST /api/pay — Shopier checkout.
+ * POST /api/pay — Shopier checkout via payment/trigger (dynamic line items).
  */
 app.post('/api/pay', async (req, res) => {
   try {
-    const { draftId, buyerEmail, buyerPhone } = req.body || {};
+    const body = req.body || {};
+    const { draftId, buyerEmail, buyerPhone, items, total_amount, totalAmount, currency } = body;
+
     if (!draftId) {
       return res.status(400).json({ error: 'draftId is required.' });
     }
@@ -231,6 +229,7 @@ app.post('/api/pay', async (req, res) => {
         buyerEmail: buyerEmail || draft.buyerEmail,
         buyerPhone: buyerPhone || draft.buyerPhone,
       });
+      draft.buyerEmail = buyerEmail || draft.buyerEmail;
     }
 
     if (!isPaymentConfigured()) {
@@ -243,35 +242,55 @@ app.post('/api/pay', async (req, res) => {
       });
     }
 
+    if (!buyerEmail && !draft.buyerEmail) {
+      return res.status(400).json({
+        error: 'buyer_email is required for Shopier payment.',
+      });
+    }
+
     await store.updateById(draftId, {
       checkoutStartedAt: new Date().toISOString(),
     });
 
-    const payment = await createPaymentRequest({ draftId });
+    const template = getCheckoutPaymentTemplate();
+    const paymentItems = Array.isArray(items) && items.length > 0
+      ? items.map((item) => ({
+          ...item,
+          id: item.id || draftId,
+        }))
+      : template.items.map((item) => ({
+          ...item,
+          id: draftId,
+        }));
+
+    const checkoutInput = buildPayloadFromDraft(draft, {
+      ...body,
+      items: paymentItems,
+      total_amount: total_amount ?? totalAmount ?? body.payment?.total_amount,
+      currency: currency ?? body.payment?.currency,
+      return_url: body.return_url || body.returnUrl || `${BASE_URL}/payment-return?draft=${draftId}`,
+    });
+
+    const payment = await initializePayment(checkoutInput);
 
     return res.json({
       mode: 'paid',
       draftId,
       successUrl: `${BASE_URL}/success/${draftId}`,
-      checkoutUrl: payment.checkoutUrl,
-      checkoutHtml: payment.checkoutHtml,
-      paymentTotal: '€1.00',
+      payment_url: payment.payment_url,
+      checkoutUrl: payment.payment_url,
+      payment_id: payment.payment_id,
+      paymentTotal: getPublicConfig().priceDisplay,
     });
   } catch (err) {
     console.error('[pay]', err);
 
     let message = 'Payment could not be started. Check your Shopier settings.';
-    if (err.message) {
-      if (/invalid media url|media\[0\]\.url/i.test(err.message)) {
-        message =
-          'Product image URL is invalid for Shopier. Remove SHOPIER_PRODUCT_IMAGE_URL or use a URL ending in .jpg or .png. Default: BASE_URL/product-cover.jpg';
-      } else if (/SHOPIER_PRODUCT_ID/i.test(err.message)) {
-        message = err.message;
-      } else if (/denied|403|forbidden/i.test(err.message)) {
-        message = 'Shopier access denied. Check SHOPIER_PAT permissions (products:read, products:write) and SHOPIER_SHOP_SLUG.';
-      } else if (/currency|EUR|TRY|USD/i.test(err.message)) {
-        message =
-          'Shopier currency error. Keep PRODUCT_CURRENCY=TRY on Render; customers still see €1.00 on this site.';
+    if (err instanceof ShopierApiError) {
+      message = err.message;
+    } else if (err.message) {
+      if (/denied|403|forbidden/i.test(err.message)) {
+        message = 'Shopier access denied. Check SHOPIER_PAT permissions and SHOPIER_SHOP_SLUG.';
       } else if (err.message.includes('401') || err.message.includes('Unauthorized') || err.message.includes('PAT')) {
         message = 'Invalid Shopier PAT. Set SHOPIER_PAT to your Personal Access Token (not Client ID).';
       } else if (err.message.includes('shopSlug') || err.message.includes('shop')) {
@@ -281,11 +300,7 @@ app.post('/api/pay', async (req, res) => {
       }
     }
 
-    if (typeof err.toSafeJSON === 'function') {
-      console.error('[pay] details', err.toSafeJSON());
-    }
-
-    return res.status(500).json({ error: message });
+    return res.status(err instanceof ShopierApiError && err.status ? err.status : 500).json({ error: message });
   }
 });
 
@@ -406,14 +421,7 @@ async function start() {
   await store.connect();
 
   if (isPaymentConfigured()) {
-    const productId = (process.env.SHOPIER_PRODUCT_ID || '').trim();
-    if (productId) {
-      console.log(`[shopier] Shared checkout product: ${productId}`);
-    } else if (process.env.NODE_ENV === 'production') {
-      console.warn(
-        '[shopier] Set SHOPIER_PRODUCT_ID on Render to reuse one Shopier product for all orders.'
-      );
-    }
+    console.log('[shopier] Dynamic payment/trigger mode (no catalog product env vars)');
   }
 
   app.listen(PORT, () => {

@@ -1324,12 +1324,30 @@
             'Payment total: €1.00'
           );
 
+          if (!state.buyerEmail.trim()) {
+            showStep(3);
+            throw new Error('Please enter your email before paying.');
+          }
+
+          var paymentTemplate = appConfig.payment || {};
+          var lineItems = (paymentTemplate.items || []).map(function (item) {
+            return {
+              id: draftData.draftId,
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity || 1,
+            };
+          });
+
           const payRes = await fetch(API_BASE + '/api/pay', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               draftId: draftData.draftId,
-              buyerEmail: state.buyerEmail.trim() || undefined,
+              buyerEmail: state.buyerEmail.trim(),
+              currency: paymentTemplate.currency || 'TRY',
+              total_amount: paymentTemplate.total_amount,
+              items: lineItems,
             }),
           });
           const payData = await parseJsonResponse(payRes);
@@ -1347,7 +1365,7 @@
             return;
           }
 
-          if (payData.successUrl && payData.checkoutHtml) {
+          if (payData.successUrl) {
             sessionStorage.setItem('valentine_success_url', payData.successUrl);
           }
 
@@ -1356,13 +1374,14 @@
             return;
           }
 
-          if (payData.checkoutHtml) {
-            openCheckoutHtml(payData.checkoutHtml);
+          var checkoutTarget = payData.payment_url || payData.checkoutUrl;
+          if (checkoutTarget) {
+            window.location.href = checkoutTarget;
             return;
           }
 
-          if (payData.checkoutUrl) {
-            window.location.href = payData.checkoutUrl;
+          if (payData.checkoutHtml) {
+            openCheckoutHtml(payData.checkoutHtml);
             return;
           }
 
