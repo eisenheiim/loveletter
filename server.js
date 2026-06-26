@@ -9,6 +9,7 @@ const { generateSiteId } = require('./lib/generateId');
 const { createPaymentRequest, parseCallback, isConfigured } = require('./lib/shopier');
 const { generateQrForSite } = require('./lib/qr');
 const { renderSurprisePage } = require('./lib/renderSurprise');
+const { getAppMode, isFreeMode, isPaidMode, getPublicConfig } = require('./lib/mode');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -86,6 +87,13 @@ async function fulfillPayment(draftId, shopierPaymentId) {
 /* ═══════════════════════════════════════ */
 
 /**
+ * GET /api/config — Public billing mode for dashboard UI.
+ */
+app.get('/api/config', (_req, res) => {
+  res.json(getPublicConfig());
+});
+
+/**
  * POST /api/create-draft
  * Saves form data + uploaded images as an unpaid draft.
  */
@@ -130,6 +138,7 @@ app.post(
         lovePoints,
         images: imagePaths,
         musicTrack,
+        plan: getAppMode(),
         isPaid: false,
         buyerEmail: req.body.buyerEmail || null,
         buyerPhone: req.body.buyerPhone || null,
@@ -137,6 +146,7 @@ app.post(
 
       return res.status(201).json({
         draftId: draft.id,
+        mode: getAppMode(),
         message: 'Draft created successfully.',
         previewUrl: `${BASE_URL}/s/${draft.id}?preview=unpaid`,
       });
@@ -149,7 +159,7 @@ app.post(
 
 /**
  * POST /api/pay
- * Initializes Shopier checkout for a draft.
+ * Free mode: publish immediately + QR. Paid mode: Shopier checkout.
  */
 app.post('/api/pay', async (req, res) => {
   try {
@@ -165,6 +175,7 @@ app.post('/api/pay', async (req, res) => {
     if (draft.isPaid) {
       return res.json({
         alreadyPaid: true,
+        mode: getAppMode(),
         successUrl: `${BASE_URL}/success/${draftId}`,
         siteUrl: `${BASE_URL}/s/${draftId}`,
         qrCodeUrl: draft.qrCodePath ? `${BASE_URL}/${draft.qrCodePath}` : null,
@@ -178,12 +189,28 @@ app.post('/api/pay', async (req, res) => {
       });
     }
 
-    /* Dev mock when Shopier credentials are not configured */
-    if (!isConfigured() && process.env.NODE_ENV !== 'production') {
+    /* ─── FREE MODE: skip Shopier, publish right away ─── */
+    if (isFreeMode()) {
+      const site = await fulfillPayment(draftId, `free-${Date.now()}`);
+      if (!site) {
+        return res.status(404).json({ error: 'Draft not found.' });
+      }
       return res.json({
-        mock: true,
-        message: 'Shopier not configured — using dev checkout.',
-        checkoutUrl: `${BASE_URL}/api/payment/dev-confirm/${draftId}`,
+        free: true,
+        mode: 'free',
+        message: 'Surprise published for free.',
+        successUrl: `${BASE_URL}/success/${draftId}`,
+        siteUrl: `${BASE_URL}/s/${draftId}`,
+        qrCodeUrl: site.qrCodePath ? `${BASE_URL}/${site.qrCodePath}` : null,
+      });
+    }
+
+    /* ─── PAID MODE: Shopier required ─── */
+    if (!isConfigured()) {
+      return res.status(503).json({
+        error: 'Ödeme sistemi henüz yapılandırılmadı. Shopier bilgilerini ekleyin veya APP_MODE=free kullanın.',
+        mode: 'paid',
+        shopierConfigured: false,
       });
     }
 
@@ -195,6 +222,7 @@ app.post('/api/pay', async (req, res) => {
     });
 
     return res.json({
+      mode: 'paid',
       draftId,
       checkoutUrl: payment.checkoutUrl,
       checkoutHtml: payment.checkoutHtml,
@@ -207,9 +235,13 @@ app.post('/api/pay', async (req, res) => {
 
 /**
  * POST /api/payment/callback
- * Shopier OSB notification — verify signature, mark paid, generate QR.
+ * Shopier OSB notification — paid mode only.
  */
 app.post('/api/payment/callback', async (req, res) => {
+  if (isFreeMode()) {
+    return res.status(400).send('Shopier callback disabled in free mode');
+  }
+
   try {
     const result = parseCallback(req.body);
 
@@ -236,9 +268,9 @@ app.post('/api/payment/callback', async (req, res) => {
 });
 
 /**
- * Dev-only: simulate successful Shopier payment without credentials.
+ * Dev-only fallback (legacy) — prefer APP_MODE=free instead.
  */
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production' && isPaidMode()) {
   app.get('/api/payment/dev-confirm/:draftId', async (req, res) => {
     try {
       const site = await fulfillPayment(req.params.draftId, `dev-${Date.now()}`);
@@ -262,6 +294,7 @@ app.get('/api/success/:id', async (req, res) => {
   return res.json({
     id: site.id,
     partnerName: site.partnerName,
+    plan: site.plan || getAppMode(),
     siteUrl: `${BASE_URL}/s/${site.id}`,
     qrCodeUrl: site.qrCodePath ? `${BASE_URL}/${site.qrCodePath}` : null,
     createdAt: site.createdAt,
@@ -332,10 +365,12 @@ app.use((err, _req, res, _next) => {
 async function start() {
   await store.connect();
   app.listen(PORT, () => {
+    const config = getPublicConfig();
     console.log(`\n  Valentine Surprise server running`);
     console.log(`  Local:   ${BASE_URL}`);
     console.log(`  Storage: ${store.mode}`);
-    console.log(`  Shopier: ${isConfigured() ? 'configured' : 'not configured (dev mock enabled)'}\n`);
+    console.log(`  Mode:    ${config.mode} (${config.priceDisplay})`);
+    console.log(`  Shopier: ${config.shopierConfigured ? 'configured' : 'not configured'}\n`);
   });
 }
 
