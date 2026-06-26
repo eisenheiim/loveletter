@@ -6,7 +6,7 @@ const fs = require('fs');
 const multer = require('multer');
 const store = require('./lib/store');
 const { generateSiteId } = require('./lib/generateId');
-const { resolveDraftFromPayment, isPaymentConfigured, testShopierConnection, deleteShopierProduct } = require('./lib/shopier');
+const { resolveDraftFromPayment, isPaymentConfigured, testShopierConnection, deleteShopierProduct, findPaidOrderForDraft } = require('./lib/shopier');
 const { initializePayment, buildPayloadFromDraft, ShopierApiError } = require('./lib/shopier-rest');
 const { getCheckoutPaymentTemplate } = require('./lib/mode');
 const { createShopierPaymentRouter, createShopierWebhookHandler } = require('./routes/shopierPayment');
@@ -336,7 +336,16 @@ if (process.env.NODE_ENV !== 'production') {
  * GET /api/success/:id — JSON payload for success screen.
  */
 app.get('/api/success/:id', async (req, res) => {
-  const site = await store.findById(req.params.id);
+  let site = await store.findById(req.params.id);
+  if (!site) return res.status(404).json({ error: 'Not found' });
+
+  if (!site.isPaid && isPaymentConfigured()) {
+    const match = await findPaidOrderForDraft(site);
+    if (match?.orderId) {
+      site = await fulfillPayment(site.id, match.orderId);
+    }
+  }
+
   if (!site) return res.status(404).json({ error: 'Not found' });
   if (!site.isPaid) return res.status(402).json({ error: 'Payment required' });
 

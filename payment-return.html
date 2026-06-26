@@ -20,7 +20,8 @@
         params.get('platform_order_id') ||
         params.get('order_id') ||
         params.get('draft') ||
-        params.get('id');
+        params.get('id') ||
+        sessionStorage.getItem('valentine_draft_id');
 
       if (draftId && /^v2026-[a-f0-9]+$/i.test(draftId)) {
         setTimeout(function () {

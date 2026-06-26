@@ -1382,6 +1382,7 @@
 
           if (payData.successUrl) {
             sessionStorage.setItem('valentine_success_url', payData.successUrl);
+            sessionStorage.setItem('valentine_draft_id', draftData.draftId);
           }
 
           if (payData.mock && payData.checkoutUrl) {
