@@ -1,0 +1,1786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#7f0a1e" />
+  <title>For You, Always</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&family=Great+Vibes&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream: '#fff5f5',
+            blush: '#ffe4e8',
+            rose: '#ff8fa3',
+            'rose-light': '#ffc2d1',
+            'rose-gold': '#f87171',
+            wine: '#9b1b30',
+            burgundy: '#7f0a1e',
+            crimson: '#dc2626',
+            cherry: '#ef4444',
+            'soft-pink': '#fecdd3',
+            'red-deep': '#5c0818',
+          },
+          fontFamily: {
+            serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
+            script: ['"Great Vibes"', 'cursive'],
+          },
+          boxShadow: {
+            glow: '0 0 40px rgba(220, 38, 38, 0.3), 0 0 80px rgba(255, 143, 163, 0.25)',
+            'glow-sm': '0 0 20px rgba(220, 38, 38, 0.35)',
+            card: '0 8px 32px rgba(127, 10, 30, 0.16)',
+          },
+          animation: {
+            'pulse-soft': 'pulse-soft 3s ease-in-out infinite',
+            float: 'float 6s ease-in-out infinite',
+          },
+          keyframes: {
+            'pulse-soft': {
+              '0%, 100%': { opacity: '0.6', transform: 'scale(1)' },
+              '50%': { opacity: '1', transform: 'scale(1.05)' },
+            },
+            float: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-12px)' },
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: #fff0f2;
+      overflow-x: hidden;
+    }
+
+    /* Ambient gradient background */
+    .ambient-bg {
+      background:
+        radial-gradient(ellipse 85% 65% at 15% 8%, rgba(255, 143, 163, 0.45) 0%, transparent 58%),
+        radial-gradient(ellipse 75% 55% at 85% 75%, rgba(220, 38, 38, 0.22) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 45% at 50% 45%, rgba(255, 107, 129, 0.18) 0%, transparent 68%),
+        linear-gradient(180deg, #fff5f7 0%, #ffe8ec 35%, #ffd6de 70%, #ffc9d4 100%);
+    }
+
+    /* Petal canvas */
+    #petal-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Gateway overlay */
+    #gateway {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(ellipse 100% 80% at 50% 35%, rgba(185, 28, 58, 0.97) 0%, rgba(95, 8, 24, 0.99) 100%);
+      transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1),
+                  visibility 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #gateway.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    /* Section eyebrow labels */
+    .section-label {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      color: #b91c1c;
+      font-size: 1.125rem;
+      font-weight: 600;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      text-shadow: 0 1px 14px rgba(255, 143, 163, 0.5);
+    }
+
+    @media (min-width: 640px) {
+      .section-label { font-size: 1.25rem; }
+    }
+
+    #gateway .section-label {
+      color: #ffc2d1;
+      text-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    /* Flower bouquet button */
+    .bouquet-btn {
+      position: relative;
+      width: 160px;
+      height: 200px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .bouquet-btn::before {
+      content: '';
+      position: absolute;
+      inset: -20px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 120, 140, 0.4) 0%, transparent 70%);
+      animation: pulse-ring 2.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse-ring {
+      0%, 100% { transform: scale(0.92); opacity: 0.5; }
+      50% { transform: scale(1.1); opacity: 1; }
+    }
+
+    .bouquet-btn svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      filter: drop-shadow(0 4px 24px rgba(255, 100, 120, 0.55));
+    }
+
+    .bouquet-btn:not(.blooming):hover svg {
+      transform: scale(1.05);
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .bouquet-flower {
+      transform-box: fill-box;
+      transform-origin: center bottom;
+    }
+
+    .bouquet-btn.blooming {
+      pointer-events: none;
+    }
+
+    /* Hero love letter */
+    .hero-section {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-glow {
+      position: absolute;
+      width: min(28rem, 90vw);
+      height: min(28rem, 90vw);
+      left: 50%;
+      top: 46%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, rgba(255, 120, 140, 0.45) 0%, rgba(220, 38, 38, 0.15) 45%, transparent 70%);
+      pointer-events: none;
+      animation: hero-glow-pulse 5s ease-in-out infinite;
+    }
+
+    @keyframes hero-glow-pulse {
+      0%, 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
+      50% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
+    }
+
+    .hero-letter {
+      position: relative;
+      z-index: 1;
+      width: min(22rem, 92vw);
+    }
+
+    .hero-letter-frame {
+      position: relative;
+      padding: 2.75rem 1.75rem 3.25rem;
+      background: linear-gradient(160deg, rgba(255, 245, 247, 0.95) 0%, rgba(255, 228, 232, 0.92) 100%);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(220, 38, 38, 0.28);
+      border-radius: 0.25rem 0.25rem 1.25rem 1.25rem;
+      box-shadow:
+        0 24px 64px rgba(185, 28, 58, 0.18),
+        0 2px 0 rgba(255, 255, 255, 0.85) inset,
+        0 -1px 0 rgba(255, 143, 163, 0.35) inset;
+    }
+
+    .hero-letter-frame::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 1.25rem;
+      right: 1.25rem;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.55), transparent);
+    }
+
+    .hero-corner {
+      position: absolute;
+      width: 2.5rem;
+      height: 2.5rem;
+      color: rgba(220, 38, 38, 0.45);
+      pointer-events: none;
+    }
+
+    .hero-corner--tl { top: 0.65rem; left: 0.65rem; }
+    .hero-corner--tr { top: 0.65rem; right: 0.65rem; transform: scaleX(-1); }
+    .hero-corner--bl { bottom: 2.5rem; left: 0.65rem; transform: scaleY(-1); }
+    .hero-corner--br { bottom: 2.5rem; right: 0.65rem; transform: scale(-1); }
+
+    .hero-eyebrow {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.38em;
+      text-transform: uppercase;
+      color: #dc2626;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-title {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.15rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-title-to {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: clamp(1.35rem, 4vw, 1.65rem);
+      font-weight: 400;
+      font-style: italic;
+      letter-spacing: 0.08em;
+      color: rgba(153, 27, 27, 0.8);
+    }
+
+    .hero-title-name {
+      font-family: 'Great Vibes', cursive;
+      font-size: clamp(3.25rem, 11vw, 4.75rem);
+      line-height: 1.05;
+      background: linear-gradient(135deg, #ef4444 0%, #b91c1c 40%, #dc2626 75%, #fb7185 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter: drop-shadow(0 2px 14px rgba(220, 38, 38, 0.25));
+      padding: 0 0.25rem;
+    }
+
+    .hero-divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-divider-line {
+      flex: 1;
+      max-width: 4rem;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.75), transparent);
+    }
+
+    .hero-divider-icon {
+      font-size: 0.65rem;
+      color: #ef4444;
+      letter-spacing: 0;
+    }
+
+    .hero-body {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: clamp(1.15rem, 3.8vw, 1.35rem);
+      font-style: italic;
+      line-height: 1.65;
+      color: rgba(127, 10, 30, 0.82);
+      max-width: 16rem;
+      margin: 0 auto;
+    }
+
+    .hero-seal {
+      position: absolute;
+      left: 50%;
+      bottom: -1.35rem;
+      transform: translateX(-50%);
+      width: 3.25rem;
+      height: 3.25rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 35% 30%, #ef4444, #b91c1c 55%, #7f0a1e);
+      border: 2px solid rgba(255, 180, 190, 0.75);
+      box-shadow:
+        0 8px 24px rgba(185, 28, 58, 0.35),
+        inset 0 2px 4px rgba(255, 255, 255, 0.2);
+      font-size: 1.1rem;
+      color: #ffe4e8;
+      animation: hero-seal-pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes hero-seal-pulse {
+      0%, 100% { box-shadow: 0 8px 24px rgba(185, 28, 58, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.2); }
+      50% { box-shadow: 0 8px 36px rgba(239, 68, 68, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.25); }
+    }
+
+    .hero-scroll-hint {
+      margin-top: 3.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .hero-scroll-text {
+      font-size: 0.65rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: rgba(220, 38, 38, 0.75);
+    }
+
+    /* Scroll reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+    }
+
+    /* Love card flip */
+    .love-card {
+      perspective: 1200px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .love-card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 200px;
+      transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-style: preserve-3d;
+    }
+
+    .love-card.flipped .love-card-inner {
+      transform: rotateY(180deg);
+    }
+
+    .love-card-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: 1rem;
+    }
+
+    .love-card-back {
+      transform: rotateY(180deg);
+    }
+
+    /* Reasons gift box */
+    .reasons-stage {
+      position: relative;
+      width: 100%;
+      min-height: 17rem;
+    }
+
+    .reasons-stage.is-open {
+      min-height: 0;
+    }
+
+    .reasons-box-wrap {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #reasons-cards {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+    }
+
+    .reasons-box {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .reasons-box:disabled {
+      cursor: default;
+    }
+
+    .reasons-box-scene {
+      perspective: 900px;
+      width: min(17rem, 78vw);
+      height: 13.5rem;
+      position: relative;
+    }
+
+    .box-lid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2.75rem;
+      transform-style: preserve-3d;
+      z-index: 3;
+      will-change: transform;
+    }
+
+    .box-lid-top {
+      height: 100%;
+      background: linear-gradient(180deg, #dc2626 0%, #991b1b 100%);
+      border-radius: 0.5rem 0.5rem 0.15rem 0.15rem;
+      border: 1px solid rgba(255, 143, 163, 0.55);
+      box-shadow: 0 -6px 24px rgba(185, 28, 58, 0.3);
+    }
+
+    .box-bow {
+      position: absolute;
+      top: -1.1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 3.4rem;
+      height: 1.6rem;
+      z-index: 4;
+    }
+
+    .box-bow::before,
+    .box-bow::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      width: 1.5rem;
+      height: 1.35rem;
+      background: linear-gradient(135deg, #fca5a5, #ef4444);
+      border-radius: 50% 50% 0 50%;
+      box-shadow: 0 2px 8px rgba(74, 28, 50, 0.2);
+    }
+
+    .box-bow::before { left: 0; transform: rotate(-28deg); }
+    .box-bow::after { right: 0; transform: scaleX(-1) rotate(-28deg); }
+
+    .box-bow-center {
+      position: absolute;
+      left: 50%;
+      top: 0.55rem;
+      transform: translateX(-50%);
+      width: 0.85rem;
+      height: 0.85rem;
+      border-radius: 50%;
+      background: #fecaca;
+      box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.5);
+    }
+
+    .box-body {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 10.5rem;
+      background: linear-gradient(165deg, #b91c1c 0%, #7f0a1e 55%, #5c0818 100%);
+      border-radius: 0.2rem 0.2rem 0.85rem 0.85rem;
+      border: 1px solid rgba(255, 143, 163, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow:
+        0 1.25rem 3rem rgba(185, 28, 58, 0.35),
+        inset 0 1px 0 rgba(255, 200, 210, 0.15);
+    }
+
+    .box-ribbon-v {
+      position: absolute;
+      left: 50%;
+      top: -0.35rem;
+      bottom: 0;
+      width: 1.35rem;
+      transform: translateX(-50%);
+      background: linear-gradient(90deg, #ef4444, #f87171 30%, #fecaca 50%, #f87171 70%, #ef4444);
+      opacity: 0.95;
+    }
+
+    .box-ribbon-h {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 42%;
+      height: 1.1rem;
+      background: linear-gradient(180deg, #f87171, #ef4444, #f87171);
+      opacity: 0.85;
+    }
+
+    .box-ribbon-h {
+      display: block;
+      margin-top: 1.25rem;
+      font-size: 0.7rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: rgba(185, 28, 58, 0.65);
+    }
+
+    .box-glow {
+      position: absolute;
+      inset: -2rem;
+      background: radial-gradient(circle, rgba(255, 100, 120, 0.35) 0%, transparent 68%);
+      z-index: -1;
+      animation: pulse-soft 3s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .reasons-cards--sealed {
+      visibility: hidden;
+      height: 0;
+      overflow: hidden;
+      margin: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .reasons-stage.is-open #reasons-cards {
+      visibility: visible;
+      height: auto;
+      overflow: visible;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .reasons-card-hint {
+      text-align: center;
+      color: rgba(185, 28, 58, 0.7);
+      font-size: 0.875rem;
+      margin-top: 1.5rem;
+      opacity: 0;
+      transform: translateY(12px);
+    }
+
+    .reasons-card-hint.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .box-sparkle {
+      position: fixed;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ef4444;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    /* Photo puzzle */
+    .puzzle-wrap {
+      position: relative;
+    }
+
+    .puzzle-board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.3rem;
+      aspect-ratio: 1;
+      width: min(20rem, 88vw);
+      margin: 0 auto;
+      padding: 0.45rem;
+      background: linear-gradient(145deg, rgba(255, 240, 243, 0.95), rgba(255, 214, 222, 0.92));
+      border-radius: 1.1rem;
+      border: 1px solid rgba(220, 38, 38, 0.3);
+      box-shadow: 0 16px 48px rgba(185, 28, 58, 0.18);
+    }
+
+    .puzzle-tile {
+      aspect-ratio: 1;
+      border-radius: 0.45rem;
+      background-size: 300% 300%;
+      background-repeat: no-repeat;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .puzzle-tile:not(.empty):hover {
+      box-shadow: 0 4px 14px rgba(74, 28, 50, 0.18);
+    }
+
+    .puzzle-tile:not(.empty):active {
+      transform: scale(0.96);
+    }
+
+    .puzzle-tile.empty {
+      background: rgba(250, 246, 242, 0.65) !important;
+      background-image: none !important;
+      cursor: default;
+      box-shadow: inset 0 2px 10px rgba(74, 28, 50, 0.06);
+    }
+
+    .puzzle-status {
+      margin-top: 1.25rem;
+      font-size: 0.875rem;
+      color: rgba(185, 28, 58, 0.75);
+    }
+
+    .puzzle-moves {
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(239, 68, 68, 0.85);
+    }
+
+    .puzzle-success {
+      margin-top: 1.5rem;
+      padding: 1.25rem 1.5rem;
+      border-radius: 1rem;
+      background: rgba(255, 240, 243, 0.9);
+      border: 1px solid rgba(220, 38, 38, 0.28);
+      box-shadow: 0 8px 32px rgba(185, 28, 58, 0.14);
+    }
+
+    .puzzle-success.is-visible {
+      animation: puzzle-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes puzzle-pop {
+      0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .puzzle-board.is-solved {
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    .puzzle-board.is-solved .puzzle-tile {
+      display: none;
+    }
+
+    .locked-section {
+      display: none !important;
+    }
+
+    /* Photo placeholder shimmer */
+    .photo-placeholder {
+      background: linear-gradient(
+        135deg,
+        #fecdd3 0%,
+        #ffe4e8 40%,
+        #fda4af 60%,
+        #ffd6de 100%
+      );
+      background-size: 200% 200%;
+      animation: shimmer 4s ease-in-out infinite;
+    }
+
+    @keyframes shimmer {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    /* Story timeline */
+    .story-chapter-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      background: rgba(255, 240, 243, 0.9);
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 0.875rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      color: #b91c1c;
+      box-shadow: 0 4px 16px rgba(185, 28, 58, 0.12);
+    }
+
+    .story-card {
+      transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                  box-shadow 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .story-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 40px rgba(185, 28, 58, 0.2);
+    }
+
+    /* Music toggle */
+    .music-toggle {
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .music-toggle.playing .music-icon-pause { display: block; }
+    .music-toggle.playing .music-icon-play { display: none; }
+    .music-toggle:not(.playing) .music-icon-pause { display: none; }
+    .music-toggle:not(.playing) .music-icon-play { display: block; }
+
+    /* Floating hearts in climax */
+    .floating-heart {
+      position: absolute;
+      opacity: 0;
+      animation: rise-heart 8s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes rise-heart {
+      0% { opacity: 0; transform: translateY(0) scale(0.5) rotate(0deg); }
+      10% { opacity: 0.6; }
+      90% { opacity: 0.3; }
+      100% { opacity: 0; transform: translateY(-120px) scale(1) rotate(20deg); }
+    }
+
+    /* Rose gold accent line */
+    .accent-line {
+      background: linear-gradient(90deg, transparent, #ef4444, #fb7185, #ef4444, transparent);
+      height: 1px;
+    }
+
+    /* Safe area for mobile */
+    @supports (padding: max(0px)) {
+      .safe-bottom { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
+      .safe-top { padding-top: max(1rem, env(safe-area-inset-top)); }
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      .reveal { opacity: 1; transform: none; }
+      .love-card-inner { transition: none; }
+      .photo-placeholder { animation: none; }
+      .floating-heart { display: none; }
+    }
+  </style>
+</head>
+<body class="ambient-bg text-burgundy antialiased">
+
+  <!-- Floating Petals Canvas -->
+  <canvas id="petal-canvas" aria-hidden="true"></canvas>
+
+  <!-- Background Audio -->
+  <audio id="bg-audio" loop preload="auto">
+    <!-- Royalty-free piano: replace with your own track -->
+    <source src="https://cdn.pixabay.com/download/audio/2022/10/25/audio_946f77164d.mp3?filename=soft-piano-music-142050.mp3" type="audio/mpeg" />
+  </audio>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- GATEWAY — Entry Screen                  -->
+  <!-- ═══════════════════════════════════════ -->
+  <div id="gateway" role="dialog" aria-label="Welcome">
+    <div class="text-center px-8 max-w-sm">
+      <p class="font-serif text-soft-pink/90 text-sm tracking-[0.35em] uppercase mb-6 reveal-gateway">Just for you</p>
+      <h1 class="font-serif text-cream text-4xl sm:text-5xl font-medium leading-tight mb-4 reveal-gateway">
+        I have a surprise<br />for you&hellip;
+      </h1>
+      <p class="text-soft-pink/70 text-sm font-light mb-14 reveal-gateway leading-relaxed">
+        Something I&apos;ve been holding onto,<br />just for this moment.
+      </p>
+
+      <button id="open-btn" class="bouquet-btn mx-auto reveal-gateway" aria-label="Open surprise">
+        <svg id="bouquet-svg" viewBox="0 0 200 240" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <!-- Wrapping & ribbon -->
+          <g id="bouquet-wrap">
+            <path d="M88 200 Q100 175 112 200 L115 230 Q100 238 85 230 Z" fill="#4a7c59" opacity="0.9"/>
+            <path d="M95 198 Q100 185 105 198" stroke="#f87171" stroke-width="2" fill="none"/>
+            <ellipse cx="100" cy="195" rx="22" ry="8" fill="#3d6b4a"/>
+          </g>
+          <!-- Stems -->
+          <g id="bouquet-stems">
+            <path d="M100 195 Q85 150 70 110" stroke="#4a7c59" stroke-width="3" stroke-linecap="round"/>
+            <path d="M100 195 Q95 140 90 95" stroke="#4a7c59" stroke-width="3" stroke-linecap="round"/>
+            <path d="M100 195 Q105 140 110 90" stroke="#4a7c59" stroke-width="3" stroke-linecap="round"/>
+            <path d="M100 195 Q115 150 130 105" stroke="#4a7c59" stroke-width="3" stroke-linecap="round"/>
+            <path d="M100 195 Q100 130 100 75" stroke="#4a7c59" stroke-width="3" stroke-linecap="round"/>
+            <path d="M100 195 Q78 145 55 115" stroke="#4a7c59" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M100 195 Q122 145 145 115" stroke="#4a7c59" stroke-width="2.5" stroke-linecap="round"/>
+          </g>
+          <!-- Flower 1 — rose left -->
+          <g class="bouquet-flower" data-flower="0">
+            <circle cx="70" cy="108" r="14" fill="#dc2626"/>
+            <circle cx="63" cy="102" r="10" fill="#ef4444"/>
+            <circle cx="77" cy="102" r="10" fill="#b91c1c"/>
+            <circle cx="70" cy="96" r="9" fill="#fecdd3"/>
+            <circle cx="70" cy="105" r="6" fill="#ffe4e8"/>
+          </g>
+          <!-- Flower 2 — pink center-left -->
+          <g class="bouquet-flower" data-flower="1">
+            <circle cx="55" cy="112" r="12" fill="#fb7185"/>
+            <circle cx="49" cy="107" r="8" fill="#fecdd3"/>
+            <circle cx="61" cy="107" r="8" fill="#f87171"/>
+            <circle cx="55" cy="102" r="7" fill="#fff1f2"/>
+          </g>
+          <!-- Flower 3 — cream top -->
+          <g class="bouquet-flower" data-flower="2">
+            <circle cx="100" cy="72" r="15" fill="#faf6f2"/>
+            <circle cx="92" cy="66" r="10" fill="#f5ebe8"/>
+            <circle cx="108" cy="66" r="10" fill="#f0e4e8"/>
+            <circle cx="100" cy="60" r="8" fill="#fff"/>
+            <circle cx="100" cy="74" r="5" fill="#ef4444"/>
+          </g>
+          <!-- Flower 4 — rose top-left -->
+          <g class="bouquet-flower" data-flower="3">
+            <circle cx="90" cy="92" r="13" fill="#b91c1c"/>
+            <circle cx="84" cy="87" r="9" fill="#dc2626"/>
+            <circle cx="96" cy="87" r="9" fill="#991b1b"/>
+            <circle cx="90" cy="82" r="7" fill="#fecdd3"/>
+          </g>
+          <!-- Flower 5 — rose top-right -->
+          <g class="bouquet-flower" data-flower="4">
+            <circle cx="110" cy="88" r="13" fill="#7f0a1e"/>
+            <circle cx="104" cy="83" r="9" fill="#b91c1c"/>
+            <circle cx="116" cy="83" r="9" fill="#991b1b"/>
+            <circle cx="110" cy="78" r="7" fill="#fb7185"/>
+          </g>
+          <!-- Flower 6 — blush right -->
+          <g class="bouquet-flower" data-flower="5">
+            <circle cx="130" cy="102" r="14" fill="#f87171"/>
+            <circle cx="123" cy="96" r="10" fill="#fecdd3"/>
+            <circle cx="137" cy="96" r="10" fill="#fda4af"/>
+            <circle cx="130" cy="90" r="8" fill="#fff1f2"/>
+          </g>
+          <!-- Flower 7 — small accent right -->
+          <g class="bouquet-flower" data-flower="6">
+            <circle cx="145" cy="112" r="11" fill="#ef4444"/>
+            <circle cx="140" cy="108" r="7" fill="#fca5a5"/>
+            <circle cx="150" cy="108" r="7" fill="#f87171"/>
+            <circle cx="145" cy="104" r="5" fill="#faf6f2"/>
+          </g>
+          <!-- Leaves -->
+          <g id="bouquet-leaves">
+            <ellipse cx="82" cy="130" rx="10" ry="5" fill="#4a7c59" transform="rotate(-30 82 130)"/>
+            <ellipse cx="118" cy="125" rx="10" ry="5" fill="#4a7c59" transform="rotate(25 118 125)"/>
+            <ellipse cx="95" cy="155" rx="8" ry="4" fill="#3d6b4a" transform="rotate(-15 95 155)"/>
+          </g>
+        </svg>
+      </button>
+
+      <p class="text-rose-light/60 text-xs tracking-widest uppercase mt-8 reveal-gateway">Tap to open</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- MAIN CONTENT                            -->
+  <!-- ═══════════════════════════════════════ -->
+  <main id="main-content" class="relative z-10 opacity-0 transition-opacity duration-1000">
+
+    <!-- Hero -->
+    <section id="hero" class="hero-section min-h-[100dvh] flex flex-col items-center justify-center px-6 safe-top safe-bottom text-center">
+      <div class="hero-glow" aria-hidden="true"></div>
+
+      <article class="reveal hero-letter">
+        <div class="hero-letter-frame">
+          <svg class="hero-corner hero-corner--tl" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+            <path d="M2 38 Q2 2 38 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M2 28 Q2 12 18 2" stroke="currentColor" stroke-width="0.6" stroke-linecap="round" opacity="0.5"/>
+          </svg>
+          <svg class="hero-corner hero-corner--tr" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+            <path d="M2 38 Q2 2 38 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M2 28 Q2 12 18 2" stroke="currentColor" stroke-width="0.6" stroke-linecap="round" opacity="0.5"/>
+          </svg>
+          <svg class="hero-corner hero-corner--bl" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+            <path d="M2 38 Q2 2 38 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          <svg class="hero-corner hero-corner--br" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+            <path d="M2 38 Q2 2 38 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+
+          <p class="hero-eyebrow">A love letter</p>
+
+          <div class="hero-title">
+            <span class="hero-title-to">To My</span>
+            <span class="hero-title-name">Favorite Person</span>
+          </div>
+
+          <div class="hero-divider" aria-hidden="true">
+            <span class="hero-divider-line"></span>
+            <span class="hero-divider-icon">♥</span>
+            <span class="hero-divider-line"></span>
+          </div>
+
+          <p class="hero-body">
+            In a world of ordinary moments,<br />
+            you are my most beautiful<br />
+            forever.
+          </p>
+
+          <div class="hero-seal" aria-hidden="true">♥</div>
+        </div>
+      </article>
+
+      <div class="reveal hero-scroll-hint animate-float">
+        <span class="hero-scroll-text">Scroll to read on</span>
+        <svg class="w-5 h-5 text-crimson/70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+        </svg>
+      </div>
+    </section>
+
+    <!-- Our Story -->
+    <section class="py-24 sm:py-32 px-6 bg-gradient-to-b from-rose-light/30 via-blush/50 to-transparent">
+      <div class="max-w-4xl mx-auto">
+        <div class="text-center mb-16 sm:mb-20">
+          <p class="reveal section-label mb-3">Chapter by chapter</p>
+          <h2 class="reveal font-serif text-4xl sm:text-5xl font-medium text-wine">Our Story</h2>
+          <div class="reveal accent-line w-20 mx-auto mt-6"></div>
+        </div>
+
+        <!-- Symmetric 2×2 grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-10">
+          <article class="reveal story-card flex flex-col items-center text-center">
+            <span class="story-chapter-num mb-4">01</span>
+            <div class="photo-placeholder aspect-[4/3] w-full rounded-2xl shadow-card flex items-center justify-center overflow-hidden border border-crimson/20">
+              <span class="text-crimson/40 text-sm font-medium tracking-wide">Photo Placeholder</span>
+            </div>
+            <p class="mt-5 font-serif text-2xl sm:text-3xl text-wine italic">The day everything changed</p>
+            <p class="text-wine/75 text-base sm:text-lg mt-2">When I first saw you smile</p>
+          </article>
+
+          <article class="reveal story-card flex flex-col items-center text-center">
+            <span class="story-chapter-num mb-4">02</span>
+            <div class="photo-placeholder aspect-[4/3] w-full rounded-2xl shadow-card flex items-center justify-center overflow-hidden border border-crimson/20">
+              <span class="text-crimson/40 text-sm font-medium tracking-wide">Photo Placeholder</span>
+            </div>
+            <p class="mt-5 font-serif text-2xl sm:text-3xl text-wine italic">Our first adventure</p>
+            <p class="text-wine/75 text-base sm:text-lg mt-2">Getting wonderfully lost together</p>
+          </article>
+
+          <article class="reveal story-card flex flex-col items-center text-center">
+            <span class="story-chapter-num mb-4">03</span>
+            <div class="photo-placeholder aspect-[4/3] w-full rounded-2xl shadow-card flex items-center justify-center overflow-hidden border border-crimson/20">
+              <span class="text-crimson/40 text-sm font-medium tracking-wide">Photo Placeholder</span>
+            </div>
+            <p class="mt-5 font-serif text-2xl sm:text-3xl text-wine italic">A quiet evening</p>
+            <p class="text-wine/75 text-base sm:text-lg mt-2">When silence felt like poetry</p>
+          </article>
+
+          <article class="reveal story-card flex flex-col items-center text-center">
+            <span class="story-chapter-num mb-4">04</span>
+            <div class="photo-placeholder aspect-[4/3] w-full rounded-2xl shadow-card flex items-center justify-center overflow-hidden border border-crimson/20">
+              <span class="text-crimson/40 text-sm font-medium tracking-wide">Photo Placeholder</span>
+            </div>
+            <p class="mt-5 font-serif text-2xl sm:text-3xl text-wine italic">The moment I knew</p>
+            <p class="text-wine/75 text-base sm:text-lg mt-2">You were the one I&apos;d been waiting for</p>
+          </article>
+        </div>
+
+        <!-- Centered finale chapter -->
+        <article class="reveal story-card flex flex-col items-center text-center mt-10 sm:mt-14 max-w-md mx-auto">
+          <span class="story-chapter-num mb-4">05</span>
+          <div class="photo-placeholder aspect-[4/3] w-full rounded-2xl shadow-card flex items-center justify-center overflow-hidden border border-crimson/20">
+            <span class="text-crimson/40 text-sm font-medium tracking-wide">Photo Placeholder</span>
+          </div>
+          <p class="mt-5 font-serif text-2xl sm:text-3xl text-wine italic">Us, right now</p>
+          <p class="text-wine/75 text-base sm:text-lg mt-2">And every tomorrow after</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- Photo Puzzle -->
+    <section id="puzzle-section" class="py-24 sm:py-32 px-6 bg-gradient-to-b from-transparent via-crimson/10 to-rose-light/25">
+      <div class="max-w-lg mx-auto text-center">
+        <p class="reveal section-label mb-3">One more step</p>
+        <h2 class="reveal font-serif text-4xl sm:text-5xl font-medium text-wine mb-4">Complete Our Picture</h2>
+        <div class="reveal accent-line w-20 mx-auto mb-6"></div>
+        <p class="reveal text-wine/70 text-base sm:text-lg mb-10 leading-relaxed">
+          Slide the squares to rebuild our photo — then you can continue.
+        </p>
+
+        <div id="puzzle-wrap" class="reveal puzzle-wrap">
+          <div id="puzzle-board" class="puzzle-board" aria-label="Photo sliding puzzle"></div>
+          <p id="puzzle-status" class="puzzle-status">Tap a tile next to the empty space</p>
+          <p id="puzzle-moves" class="puzzle-moves">Moves: <span id="puzzle-move-count">0</span></p>
+        </div>
+
+        <div id="puzzle-success" class="puzzle-success hidden" aria-live="polite">
+          <p class="font-serif text-2xl text-wine italic">Perfect!</p>
+          <p class="text-wine/70 text-sm mt-2">You unlocked what comes next&hellip;</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Why I Love You -->
+    <section id="reasons-section" class="locked-section py-24 sm:py-32 px-6 bg-gradient-to-b from-transparent via-rose/25 to-crimson/15">
+      <div class="max-w-5xl mx-auto">
+        <div class="text-center mb-12 sm:mb-16">
+          <p class="reveal section-label mb-3">Countless reasons</p>
+          <h2 class="reveal font-serif text-4xl sm:text-5xl font-medium text-wine">Why I Love You</h2>
+          <div class="reveal accent-line w-20 mx-auto mt-6"></div>
+        </div>
+
+        <div id="reasons-stage" class="reasons-stage">
+          <!-- Love cards — appear directly under heading when box opens -->
+          <div id="reasons-cards" class="reasons-cards--sealed grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6 w-full max-w-3xl mx-auto">
+            <div class="love-card h-52 sm:h-56" tabindex="0" role="button" aria-label="Reveal: Your laugh">
+              <div class="love-card-inner">
+                <div class="love-card-face bg-blush/80 backdrop-blur-sm border border-crimson/25 shadow-card flex flex-col items-center justify-center p-6">
+                  <span class="text-3xl mb-3">✨</span>
+                  <h3 class="font-serif text-2xl text-wine">Your Laugh</h3>
+                  <p class="text-wine/40 text-xs mt-3 tracking-widest uppercase">Tap to open</p>
+                </div>
+                <div class="love-card-face love-card-back bg-gradient-to-br from-crimson to-burgundy shadow-card flex flex-col items-center justify-center p-6 text-center">
+                  <p class="font-serif text-cream text-lg leading-relaxed italic">
+                    &ldquo;It&apos;s the sound that turns my worst days into something worth living.&rdquo;
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="love-card h-52 sm:h-56" tabindex="0" role="button" aria-label="Reveal: Your kindness">
+              <div class="love-card-inner">
+                <div class="love-card-face bg-blush/80 backdrop-blur-sm border border-crimson/25 shadow-card flex flex-col items-center justify-center p-6">
+                  <span class="text-3xl mb-3">🌸</span>
+                  <h3 class="font-serif text-2xl text-wine">Your Kindness</h3>
+                  <p class="text-wine/40 text-xs mt-3 tracking-widest uppercase">Tap to open</p>
+                </div>
+                <div class="love-card-face love-card-back bg-gradient-to-br from-cherry to-wine shadow-card flex flex-col items-center justify-center p-6 text-center">
+                  <p class="font-serif text-cream text-lg leading-relaxed italic">
+                    &ldquo;You make everyone around you feel seen. That&apos;s rare, and it&apos;s beautiful.&rdquo;
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="love-card h-52 sm:h-56" tabindex="0" role="button" aria-label="Reveal: Your eyes">
+              <div class="love-card-inner">
+                <div class="love-card-face bg-blush/80 backdrop-blur-sm border border-crimson/25 shadow-card flex flex-col items-center justify-center p-6">
+                  <span class="text-3xl mb-3">🌙</span>
+                  <h3 class="font-serif text-2xl text-wine">Your Eyes</h3>
+                  <p class="text-wine/40 text-xs mt-3 tracking-widest uppercase">Tap to open</p>
+                </div>
+                <div class="love-card-face love-card-back bg-gradient-to-br from-burgundy to-crimson shadow-card flex flex-col items-center justify-center p-6 text-center">
+                  <p class="font-serif text-cream text-lg leading-relaxed italic">
+                    &ldquo;I could get lost in them forever and still find my way home.&rdquo;
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="love-card h-52 sm:h-56" tabindex="0" role="button" aria-label="Reveal: Us">
+              <div class="love-card-inner">
+                <div class="love-card-face bg-blush/80 backdrop-blur-sm border border-crimson/25 shadow-card flex flex-col items-center justify-center p-6">
+                  <span class="text-3xl mb-3">🕊️</span>
+                  <h3 class="font-serif text-2xl text-wine">Us</h3>
+                  <p class="text-wine/40 text-xs mt-3 tracking-widest uppercase">Tap to open</p>
+                </div>
+                <div class="love-card-face love-card-back bg-gradient-to-br from-burgundy to-crimson shadow-card flex flex-col items-center justify-center p-6 text-center">
+                  <p class="font-serif text-cream text-lg leading-relaxed italic">
+                    &ldquo;Every version of my future has you in it. That&apos;s not a wish &mdash; it&apos;s a promise.&rdquo;
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gift box — floats over card slot until opened -->
+          <div id="reasons-box-wrap" class="reasons-box-wrap reveal">
+            <button id="reasons-box" class="reasons-box" aria-label="Open box of reasons">
+              <div class="reasons-box-scene">
+                <div class="box-glow" aria-hidden="true"></div>
+                <div class="box-lid" id="box-lid">
+                  <div class="box-bow" aria-hidden="true"><span class="box-bow-center"></span></div>
+                  <div class="box-lid-top"></div>
+                </div>
+                <div class="box-body">
+                  <div class="box-ribbon-v" aria-hidden="true"></div>
+                  <div class="box-ribbon-h" aria-hidden="true"></div>
+                </div>
+              </div>
+              <span class="box-tap-hint">Tap to open</span>
+            </button>
+          </div>
+
+          <p id="reasons-card-hint" class="reasons-card-hint">Tap each card to reveal a little piece of my heart</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Climax / Final Message -->
+    <section id="climax" class="locked-section relative min-h-[100dvh] flex flex-col items-center justify-center px-6 py-24 safe-bottom overflow-hidden bg-gradient-to-b from-crimson/10 via-blush/40 to-rose-light/30">
+      <!-- Floating hearts container -->
+      <div id="floating-hearts" class="absolute inset-0 pointer-events-none" aria-hidden="true"></div>
+
+      <div class="relative z-10 text-center max-w-2xl">
+        <p class="reveal section-label mb-6">Forever &amp; always</p>
+
+        <blockquote class="reveal font-serif text-4xl sm:text-5xl md:text-6xl font-medium text-wine leading-[1.15] mb-8">
+          You are my <span class="italic text-crimson">today</span>,<br />
+          my every <span class="italic text-crimson">tomorrow</span>,<br />
+          and all my <span class="italic text-crimson">forevers</span>.
+        </blockquote>
+
+        <div class="reveal accent-line w-32 mx-auto mb-16"></div>
+
+        <p class="reveal font-serif text-2xl text-crimson italic">With all my love,</p>
+        <p class="reveal font-serif text-3xl text-wine mt-2">Your Name Here ♥</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Floating Music Toggle -->
+  <button id="music-toggle"
+          class="music-toggle fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-blush/90 border border-crimson/35 shadow-glow-sm flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 safe-bottom"
+          style="margin-bottom: env(safe-area-inset-bottom, 0px);"
+          aria-label="Toggle background music">
+    <svg class="music-icon-play w-5 h-5 text-wine" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M8 5v14l11-7z"/>
+    </svg>
+    <svg class="music-icon-pause w-5 h-5 text-wine" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+    </svg>
+  </button>
+
+  <!-- GSAP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+  <script>
+    (function () {
+      'use strict';
+
+      /* ─── DOM refs ─── */
+      const gateway = document.getElementById('gateway');
+      const openBtn = document.getElementById('open-btn');
+      const mainContent = document.getElementById('main-content');
+      const bgAudio = document.getElementById('bg-audio');
+      const musicToggle = document.getElementById('music-toggle');
+      const canvas = document.getElementById('petal-canvas');
+      const ctx = canvas.getContext('2d');
+      const floatingHearts = document.getElementById('floating-hearts');
+
+      let audioPlaying = false;
+      let petals = [];
+      let animationId = null;
+      let gatewayOpened = false;
+
+      /* ─── Gateway entrance animation ─── */
+      gsap.from('.reveal-gateway', {
+        opacity: 0,
+        y: 30,
+        duration: 1,
+        stagger: 0.15,
+        ease: 'power3.out',
+        delay: 0.3,
+      });
+
+      /* ─── Open gateway — bouquet bloom ─── */
+      const BLOOM_VECTORS = [
+        { x: -140, y: -160, rotation: -220 },
+        { x: -180, y: -60,  rotation: -160 },
+        { x: -30,  y: -200, rotation: -280 },
+        { x: -90,  y: -140, rotation: -200 },
+        { x: 90,   y: -150, rotation: 200 },
+        { x: 150,  y: -120, rotation: 240 },
+        { x: 200,  y: -50,  rotation: 320 },
+      ];
+
+      function openGateway() {
+        if (gatewayOpened) return;
+        gatewayOpened = true;
+        openBtn.classList.add('blooming');
+
+        const flowers = document.querySelectorAll('.bouquet-flower');
+        const stems = document.getElementById('bouquet-stems');
+        const leaves = document.getElementById('bouquet-leaves');
+        const wrap = document.getElementById('bouquet-wrap');
+
+        flowers.forEach((flower, i) => {
+          const vec = BLOOM_VECTORS[i] || {
+            x: (Math.random() - 0.5) * 300,
+            y: -120 - Math.random() * 100,
+            rotation: (Math.random() - 0.5) * 360,
+          };
+
+          gsap.to(flower, {
+            x: vec.x,
+            y: vec.y,
+            rotation: vec.rotation,
+            scale: 1.4,
+            duration: 1.1,
+            ease: 'power3.out',
+            delay: i * 0.06,
+          });
+
+          gsap.to(flower, {
+            opacity: 0,
+            scale: 0.2,
+            duration: 0.7,
+            ease: 'power2.in',
+            delay: 0.7 + i * 0.05,
+          });
+        });
+
+        gsap.to([stems, leaves, wrap], {
+          opacity: 0,
+          y: 30,
+          duration: 0.6,
+          ease: 'power2.in',
+          delay: 0.15,
+        });
+
+        gsap.to('.reveal-gateway', {
+          opacity: 0,
+          y: -20,
+          duration: 0.8,
+          ease: 'power2.in',
+          delay: 0.4,
+        });
+
+        gsap.to(gateway, {
+          opacity: 0,
+          duration: 1,
+          ease: 'power2.inOut',
+          delay: 1.3,
+          onComplete: () => {
+            gateway.classList.add('hidden');
+            mainContent.style.opacity = '1';
+            startAudio();
+            initScrollAnimations();
+          },
+        });
+      }
+
+      openBtn.addEventListener('click', openGateway);
+      openBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        openGateway();
+      });
+
+      /* ─── Audio ─── */
+      bgAudio.volume = 0.35;
+
+      function startAudio() {
+        bgAudio.play().then(() => {
+          audioPlaying = true;
+          musicToggle.classList.add('playing');
+        }).catch(() => {
+          audioPlaying = false;
+          musicToggle.classList.remove('playing');
+        });
+      }
+
+      function toggleAudio() {
+        if (audioPlaying) {
+          bgAudio.pause();
+          audioPlaying = false;
+          musicToggle.classList.remove('playing');
+        } else {
+          bgAudio.play().then(() => {
+            audioPlaying = true;
+            musicToggle.classList.add('playing');
+          }).catch(() => {});
+        }
+      }
+
+      musicToggle.addEventListener('click', toggleAudio);
+
+      /* ─── Photo puzzle ─── */
+      // Drop your photo in the same folder as index.html named puzzle-photo.jpg
+      const PUZZLE_IMAGE = 'puzzle-photo.jpg';
+      const PUZZLE_FALLBACK = 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=600&q=80';
+      let puzzleImageSrc = PUZZLE_IMAGE;
+
+      const PUZZLE_SIZE = 3;
+      const PUZZLE_EMPTY = PUZZLE_SIZE * PUZZLE_SIZE - 1;
+      const puzzleBoard = document.getElementById('puzzle-board');
+      const puzzleMoveCount = document.getElementById('puzzle-move-count');
+      const puzzleStatus = document.getElementById('puzzle-status');
+      const puzzleSuccess = document.getElementById('puzzle-success');
+      let puzzleState = [];
+      let puzzleMoves = 0;
+      let puzzleSolved = false;
+      let puzzleTiles = [];
+
+      function puzzleIndex(row, col) {
+        return row * PUZZLE_SIZE + col;
+      }
+
+      function puzzleEmptyIndex() {
+        return puzzleState.indexOf(PUZZLE_EMPTY);
+      }
+
+      function puzzleNeighbors(index) {
+        const row = Math.floor(index / PUZZLE_SIZE);
+        const col = index % PUZZLE_SIZE;
+        const neighbors = [];
+        if (row > 0) neighbors.push(puzzleIndex(row - 1, col));
+        if (row < PUZZLE_SIZE - 1) neighbors.push(puzzleIndex(row + 1, col));
+        if (col > 0) neighbors.push(puzzleIndex(row, col - 1));
+        if (col < PUZZLE_SIZE - 1) neighbors.push(puzzleIndex(row, col + 1));
+        return neighbors;
+      }
+
+      function puzzleTileBackground(piece) {
+        const row = Math.floor(piece / PUZZLE_SIZE);
+        const col = piece % PUZZLE_SIZE;
+        return {
+          backgroundImage: `url('${puzzleImageSrc}')`,
+          backgroundSize: '300% 300%',
+          backgroundPosition: `${col * 50}% ${row * 50}%`,
+        };
+      }
+
+      function puzzleRender() {
+        puzzleState.forEach((piece, index) => {
+          const tile = puzzleTiles[index];
+          if (piece === PUZZLE_EMPTY) {
+            tile.classList.add('empty');
+            tile.style.backgroundImage = '';
+            tile.removeAttribute('aria-label');
+          } else {
+            tile.classList.remove('empty');
+            const bg = puzzleTileBackground(piece);
+            tile.style.backgroundImage = bg.backgroundImage;
+            tile.style.backgroundSize = bg.backgroundSize;
+            tile.style.backgroundPosition = bg.backgroundPosition;
+            tile.setAttribute('aria-label', `Puzzle piece ${piece + 1}`);
+          }
+        });
+      }
+
+      function puzzleTryMove(index) {
+        if (puzzleSolved || puzzleState[index] === PUZZLE_EMPTY) return;
+
+        const empty = puzzleEmptyIndex();
+        if (!puzzleNeighbors(index).includes(empty)) return;
+
+        puzzleState[empty] = puzzleState[index];
+        puzzleState[index] = PUZZLE_EMPTY;
+        puzzleMoves += 1;
+        puzzleMoveCount.textContent = puzzleMoves;
+        puzzleRender();
+
+        if (puzzleState.every((val, i) => val === i)) {
+          puzzleOnSolved();
+        }
+      }
+
+      function puzzleShuffle() {
+        puzzleState = Array.from({ length: PUZZLE_SIZE * PUZZLE_SIZE }, (_, i) => i);
+        let empty = puzzleEmptyIndex();
+        const moves = 2 + Math.floor(Math.random() * 2); // 2 or 3 easy steps
+        let prev = -1;
+
+        for (let i = 0; i < moves; i += 1) {
+          const options = puzzleNeighbors(empty).filter((n) => n !== prev);
+          const pick = options[Math.floor(Math.random() * options.length)];
+          puzzleState[empty] = puzzleState[pick];
+          puzzleState[pick] = PUZZLE_EMPTY;
+          prev = empty;
+          empty = pick;
+        }
+      }
+
+      function puzzleUnlockContent() {
+        document.querySelectorAll('.locked-section').forEach((section) => {
+          section.classList.remove('locked-section');
+          gsap.from(section, {
+            opacity: 0,
+            y: 36,
+            duration: 1,
+            ease: 'power3.out',
+          });
+        });
+
+        ScrollTrigger.refresh();
+
+        initUnlockedSectionReveals();
+
+        setTimeout(() => {
+          document.getElementById('reasons-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 600);
+      }
+
+      function puzzleOnSolved() {
+        puzzleSolved = true;
+        puzzleBoard.classList.add('is-solved');
+        puzzleStatus.textContent = 'Beautiful — you completed it!';
+        puzzleSuccess.classList.remove('hidden');
+        puzzleSuccess.classList.add('is-visible');
+
+        gsap.to(puzzleBoard, {
+          scale: 1.02,
+          duration: 0.45,
+          ease: 'power2.out',
+          onComplete: () => {
+            puzzleBoard.style.backgroundImage = `url('${puzzleImageSrc}')`;
+            gsap.to(puzzleBoard, { scale: 1, duration: 0.35, ease: 'power2.inOut' });
+          },
+        });
+
+        gsap.delayedCall(1.2, puzzleUnlockContent);
+      }
+
+      function puzzleInit() {
+        puzzleBoard.innerHTML = '';
+        puzzleTiles = [];
+
+        for (let i = 0; i < PUZZLE_SIZE * PUZZLE_SIZE; i += 1) {
+          const tile = document.createElement('button');
+          tile.type = 'button';
+          tile.className = 'puzzle-tile';
+          tile.dataset.slot = i;
+          tile.addEventListener('click', () => puzzleTryMove(Number(tile.dataset.slot)));
+          puzzleBoard.appendChild(tile);
+          puzzleTiles.push(tile);
+        }
+
+        function puzzleStartBoard() {
+          puzzleShuffle();
+          puzzleRender();
+        }
+
+        function puzzleLoadImage(src, fallback) {
+          const img = new Image();
+          img.onload = () => {
+            puzzleImageSrc = src;
+            puzzleStartBoard();
+          };
+          img.onerror = () => {
+            if (fallback) {
+              puzzleLoadImage(fallback, null);
+            } else {
+              puzzleStatus.textContent = 'Add puzzle-photo.jpg to this folder, then refresh';
+              puzzleState = Array.from({ length: PUZZLE_SIZE * PUZZLE_SIZE }, (_, i) => i);
+              puzzleRender();
+            }
+          };
+          img.src = src;
+        }
+
+        puzzleLoadImage(PUZZLE_IMAGE, PUZZLE_FALLBACK);
+      }
+
+      puzzleInit();
+
+      /* ─── Scroll animations ─── */
+      function initScrollAnimations() {
+        gsap.registerPlugin(ScrollTrigger);
+
+        gsap.utils.toArray('.reveal').forEach((el) => {
+          if (el.closest('.locked-section')) return;
+
+          gsap.to(el, {
+            opacity: 1,
+            y: 0,
+            duration: 1,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: el,
+              start: 'top 88%',
+              toggleActions: 'play none none none',
+            },
+          });
+        });
+
+        ScrollTrigger.refresh();
+      }
+
+      function initUnlockedSectionReveals() {
+        gsap.utils.toArray('#reasons-section .reveal, #climax .reveal').forEach((el) => {
+          gsap.to(el, {
+            opacity: 1,
+            y: 0,
+            duration: 1,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: el,
+              start: 'top 88%',
+              toggleActions: 'play none none none',
+            },
+          });
+        });
+
+        ScrollTrigger.refresh();
+      }
+
+      /* ─── Reasons gift box ─── */
+      let reasonsOpened = false;
+      const reasonsBox = document.getElementById('reasons-box');
+      const reasonsBoxWrap = document.getElementById('reasons-box-wrap');
+      const reasonsStage = document.getElementById('reasons-stage');
+      const reasonsCards = document.getElementById('reasons-cards');
+      const reasonsCardHint = document.getElementById('reasons-card-hint');
+      const boxLid = document.getElementById('box-lid');
+
+      /* ─── Love card flip ─── */
+      document.querySelectorAll('.love-card').forEach((card) => {
+        const flip = () => {
+          if (!reasonsOpened) return;
+          card.classList.toggle('flipped');
+        };
+
+        card.addEventListener('click', flip);
+        card.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            flip();
+          }
+        });
+      });
+
+      function spawnBoxSparkles(x, y) {
+        for (let i = 0; i < 14; i++) {
+          const spark = document.createElement('span');
+          spark.className = 'box-sparkle';
+          spark.style.left = x + 'px';
+          spark.style.top = y + 'px';
+          document.body.appendChild(spark);
+
+          const angle = (Math.PI * 2 * i) / 14 + Math.random() * 0.4;
+          const dist = 40 + Math.random() * 70;
+
+          gsap.to(spark, {
+            x: Math.cos(angle) * dist,
+            y: Math.sin(angle) * dist - 30,
+            opacity: 0,
+            scale: Math.random() * 2 + 0.5,
+            duration: 0.7 + Math.random() * 0.4,
+            ease: 'power2.out',
+            onComplete: () => spark.remove(),
+          });
+        }
+      }
+
+      function openReasonsBox() {
+        if (reasonsOpened) return;
+        reasonsOpened = true;
+        reasonsBox.disabled = true;
+
+        const cards = gsap.utils.toArray('#reasons-cards .love-card');
+        const boxRect = reasonsBox.getBoundingClientRect();
+        const originX = boxRect.left + boxRect.width / 2;
+        const originY = boxRect.top + boxRect.height / 2;
+
+        gsap.to(boxLid, {
+          rotateX: -108,
+          y: -10,
+          duration: 0.55,
+          ease: 'power2.out',
+          transformOrigin: 'center top',
+        });
+
+        gsap.to('.box-glow', {
+          scale: 1.9,
+          opacity: 0.75,
+          duration: 0.5,
+          ease: 'power2.out',
+        });
+
+        gsap.to('.box-tap-hint', {
+          opacity: 0,
+          duration: 0.25,
+          delay: 0.15,
+        });
+
+        spawnBoxSparkles(originX, originY - 20);
+
+        gsap.delayedCall(0.35, () => {
+          reasonsStage.classList.add('is-open');
+          reasonsCards.classList.remove('reasons-cards--sealed');
+
+          cards.forEach((card) => { card.style.visibility = 'hidden'; });
+          void reasonsCards.offsetHeight;
+
+          const finals = cards.map((card) => card.getBoundingClientRect());
+
+          cards.forEach((card, i) => {
+            const f = finals[i];
+            card.style.visibility = 'visible';
+
+            gsap.set(card, {
+              position: 'fixed',
+              left: f.left,
+              top: f.top,
+              width: f.width,
+              height: f.height,
+              margin: 0,
+              x: originX - f.left - f.width / 2,
+              y: originY - f.top - f.height / 2,
+              scale: 0.1,
+              opacity: 0,
+              rotation: (i - 1.5) * 22,
+              zIndex: 40 + i,
+            });
+          });
+
+          gsap.to(reasonsBoxWrap, {
+            opacity: 0,
+            scale: 0.88,
+            duration: 0.45,
+            ease: 'power2.in',
+            onComplete: () => {
+              reasonsBoxWrap.style.display = 'none';
+              reasonsStage.style.minHeight = '0';
+            },
+          });
+
+          cards.forEach((card, i) => {
+            gsap.to(card, {
+              x: 0,
+              y: 0,
+              scale: 1,
+              opacity: 1,
+              rotation: 0,
+              duration: 0.85,
+              delay: i * 0.09,
+              ease: 'power3.out',
+              onComplete: () => {
+                if (i === cards.length - 1) {
+                  cards.forEach((c) => gsap.set(c, { clearProps: 'all' }));
+                  reasonsCardHint.classList.add('is-visible');
+                  ScrollTrigger.refresh();
+                }
+              },
+            });
+          });
+        });
+      }
+
+      reasonsBox.addEventListener('click', openReasonsBox);
+
+      /* ─── Floating petals ─── */
+      const PETAL_COLORS = [
+        'rgba(255, 143, 163, 0.65)',
+        'rgba(254, 205, 211, 0.6)',
+        'rgba(239, 68, 68, 0.4)',
+        'rgba(220, 38, 38, 0.35)',
+        'rgba(251, 113, 133, 0.55)',
+      ];
+
+      class Petal {
+        constructor() { this.reset(true); }
+
+        reset(initial = false) {
+          this.x = Math.random() * canvas.width;
+          this.y = initial ? Math.random() * canvas.height : -20;
+          this.size = Math.random() * 10 + 6;
+          this.speedY = Math.random() * 0.6 + 0.3;
+          this.speedX = Math.random() * 0.4 - 0.2;
+          this.rotation = Math.random() * Math.PI * 2;
+          this.rotationSpeed = (Math.random() - 0.5) * 0.02;
+          this.opacity = Math.random() * 0.4 + 0.2;
+          this.color = PETAL_COLORS[Math.floor(Math.random() * PETAL_COLORS.length)];
+          this.wobble = Math.random() * Math.PI * 2;
+          this.wobbleSpeed = Math.random() * 0.02 + 0.01;
+        }
+
+        update() {
+          this.wobble += this.wobbleSpeed;
+          this.y += this.speedY;
+          this.x += this.speedX + Math.sin(this.wobble) * 0.3;
+          this.rotation += this.rotationSpeed;
+
+          if (this.y > canvas.height + 20) this.reset();
+        }
+
+        draw() {
+          ctx.save();
+          ctx.translate(this.x, this.y);
+          ctx.rotate(this.rotation);
+          ctx.globalAlpha = this.opacity;
+
+          const s = this.size;
+          ctx.fillStyle = this.color;
+          ctx.beginPath();
+          ctx.moveTo(0, -s * 0.5);
+          ctx.bezierCurveTo(s * 0.6, -s * 0.3, s * 0.5, s * 0.4, 0, s * 0.5);
+          ctx.bezierCurveTo(-s * 0.5, s * 0.4, -s * 0.6, -s * 0.3, 0, -s * 0.5);
+          ctx.fill();
+
+          ctx.restore();
+        }
+      }
+
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+
+      function initPetals() {
+        resizeCanvas();
+        const count = Math.min(40, Math.floor(window.innerWidth / 25));
+        petals = Array.from({ length: count }, () => new Petal());
+      }
+
+      function animatePetals() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        petals.forEach((p) => { p.update(); p.draw(); });
+        animationId = requestAnimationFrame(animatePetals);
+      }
+
+      initPetals();
+      animatePetals();
+
+      window.addEventListener('resize', () => {
+        resizeCanvas();
+        initPetals();
+        ScrollTrigger.refresh();
+      });
+
+      /* ─── Climax floating hearts ─── */
+      function createFloatingHeart() {
+        const heart = document.createElement('span');
+        heart.className = 'floating-heart text-crimson/50';
+        heart.textContent = '♥';
+        heart.style.left = Math.random() * 100 + '%';
+        heart.style.bottom = Math.random() * 30 + '%';
+        heart.style.fontSize = (Math.random() * 12 + 8) + 'px';
+        heart.style.animationDelay = Math.random() * 4 + 's';
+        heart.style.animationDuration = (Math.random() * 4 + 6) + 's';
+        floatingHearts.appendChild(heart);
+
+        setTimeout(() => heart.remove(), 12000);
+      }
+
+      setInterval(createFloatingHeart, 1800);
+      for (let i = 0; i < 5; i++) setTimeout(createFloatingHeart, i * 400);
+
+      /* ─── Hide music toggle until gateway opens ─── */
+      musicToggle.style.opacity = '0';
+      musicToggle.style.pointerEvents = 'none';
+
+      const observer = new MutationObserver(() => {
+        if (gateway.classList.contains('hidden')) {
+          gsap.to(musicToggle, { opacity: 1, duration: 0.8, delay: 0.5 });
+          musicToggle.style.pointerEvents = 'auto';
+          observer.disconnect();
+        }
+      });
+      observer.observe(gateway, { attributes: true, attributeFilter: ['class'] });
+
+    })();
+  </script>
+</body>
+</html>

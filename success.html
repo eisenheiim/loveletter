@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your Surprise Is Ready!</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: linear-gradient(180deg, #fff5f7, #ffe8ec);
+      min-height: 100dvh;
+    }
+    .card {
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(220,38,38,0.12);
+      box-shadow: 0 8px 32px rgba(127,10,30,0.12);
+      border-radius: 1.25rem;
+    }
+  </style>
+</head>
+<body class="flex items-center justify-center p-6">
+  <div class="card max-w-md w-full p-8 text-center">
+    <p class="text-sm tracking-[0.25em] uppercase text-red-700/60 mb-3">Payment successful</p>
+    <h1 class="font-['Cormorant_Garamond'] text-3xl text-[#7f0a1e] mb-2">Your surprise is live!</h1>
+    <p id="subtitle" class="text-[#9b1b30]/70 text-sm mb-6">Generating your QR code…</p>
+
+    <div id="qr-wrap" class="hidden mb-6">
+      <img id="qr-image" alt="QR code to your surprise page" class="mx-auto w-48 h-48 rounded-xl border border-red-200/40 shadow-md" />
+      <a id="qr-download" href="#" download class="inline-block mt-4 text-sm text-red-700 underline">Download QR Code</a>
+    </div>
+
+    <div class="space-y-3">
+      <a id="site-link" href="#" class="block w-full py-3 rounded-full bg-gradient-to-r from-red-500 to-red-800 text-white font-medium text-sm">Open Surprise Page</a>
+      <button id="copy-link" type="button" class="block w-full py-3 rounded-full border border-red-300/40 text-[#9b1b30] text-sm">Copy Link</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const id = location.pathname.split('/').pop();
+      const apiUrl = '/api/success/' + encodeURIComponent(id);
+
+      fetch(apiUrl)
+        .then(function (res) {
+          if (!res.ok) throw new Error('Not ready');
+          return res.json();
+        })
+        .then(function (data) {
+          document.getElementById('subtitle').textContent =
+            'Share this with ' + (data.partnerName || 'your valentine') + ' — scan the QR or send the link.';
+          document.getElementById('site-link').href = data.siteUrl;
+
+          if (data.qrCodeUrl) {
+            document.getElementById('qr-wrap').classList.remove('hidden');
+            document.getElementById('qr-image').src = data.qrCodeUrl;
+            document.getElementById('qr-download').href = data.qrCodeUrl;
+            document.getElementById('qr-download').download = 'valentine-surprise-' + id + '.png';
+          }
+
+          document.getElementById('copy-link').addEventListener('click', function () {
+            navigator.clipboard.writeText(data.siteUrl).then(function () {
+              document.getElementById('copy-link').textContent = 'Copied!';
+            });
+          });
+        })
+        .catch(function () {
+          document.getElementById('subtitle').textContent =
+            'We are still processing your payment. Please refresh in a moment.';
+        });
+    })();
+  </script>
+</body>
+</html>
