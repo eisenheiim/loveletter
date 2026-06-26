@@ -6,7 +6,7 @@ const fs = require('fs');
 const multer = require('multer');
 const store = require('./lib/store');
 const { generateSiteId } = require('./lib/generateId');
-const { createPaymentRequest, handleWebhook, extractDraftIdFromOrder, isPaymentConfigured, deleteShopierProduct, listCheckoutListingProducts, deleteAllCheckoutListingProducts, testShopierConnection } = require('./lib/shopier');
+const { createPaymentRequest, handleWebhook, extractDraftIdFromOrder, isPaymentConfigured, deleteShopierProduct, testShopierConnection } = require('./lib/shopier');
 const { generateQrForSite, buildWhatsAppShareUrl } = require('./lib/qr');
 const { renderSurprisePage } = require('./lib/renderSurprise');
 const { getAppMode, getPublicConfig } = require('./lib/mode');
@@ -150,60 +150,6 @@ app.get('/api/shopier/status', async (_req, res) => {
 });
 
 /**
- * GET /api/shopier/listing-products — leftover custom-listing products in Shopier.
- */
-app.get('/api/shopier/listing-products', async (_req, res) => {
-  if (!isPaymentConfigured()) {
-    return res.status(503).json({ error: 'Shopier is not configured.' });
-  }
-  try {
-    const products = await listCheckoutListingProducts();
-    return res.json({
-      products: products.map((p) => ({
-        id: p.id,
-        title: p.title,
-        dateCreated: p.dateCreated || null,
-      })),
-    });
-  } catch (err) {
-    console.error('[shopier/listing-products]', err);
-    return res.status(500).json({ error: 'Could not load Shopier products.' });
-  }
-});
-
-/**
- * DELETE /api/shopier/listing-products/:id
- */
-app.delete('/api/shopier/listing-products/:id', async (req, res) => {
-  if (!isPaymentConfigured()) {
-    return res.status(503).json({ error: 'Shopier is not configured.' });
-  }
-  try {
-    await deleteShopierProduct(req.params.id);
-    return res.json({ deleted: true, id: req.params.id });
-  } catch (err) {
-    console.error('[shopier/delete-product]', err);
-    return res.status(500).json({ error: 'Could not delete Shopier product.' });
-  }
-});
-
-/**
- * POST /api/shopier/listing-products/cleanup — delete all custom-listing products.
- */
-app.post('/api/shopier/listing-products/cleanup', async (_req, res) => {
-  if (!isPaymentConfigured()) {
-    return res.status(503).json({ error: 'Shopier is not configured.' });
-  }
-  try {
-    const result = await deleteAllCheckoutListingProducts();
-    return res.json(result);
-  } catch (err) {
-    console.error('[shopier/cleanup]', err);
-    return res.status(500).json({ error: 'Could not clean up Shopier products.' });
-  }
-});
-
-/**
  * POST /api/create-draft
  * Saves form data + uploaded images as an unpaid draft.
  */
@@ -334,9 +280,11 @@ app.post('/api/pay', async (req, res) => {
       if (/invalid media url|media\[0\]\.url/i.test(err.message)) {
         message =
           'Product image URL is invalid for Shopier. Remove SHOPIER_PRODUCT_IMAGE_URL or use a URL ending in .jpg or .png. Default: BASE_URL/product-cover.jpg';
+      } else if (/denied|403|forbidden/i.test(err.message)) {
+        message = 'Shopier access denied. Check SHOPIER_PAT permissions (products:read, products:write) and SHOPIER_SHOP_SLUG.';
       } else if (/currency|EUR|TRY|USD/i.test(err.message)) {
         message =
-          'Shopier currency error on the server. Keep PRODUCT_CURRENCY=TRY on Render; customers always see €1.00 on this site.';
+          'Shopier currency error. Keep PRODUCT_CURRENCY=TRY on Render; customers still see €1.00 on this site.';
       } else if (err.message.includes('401') || err.message.includes('Unauthorized') || err.message.includes('PAT')) {
         message = 'Invalid Shopier PAT. Set SHOPIER_PAT to your Personal Access Token (not Client ID).';
       } else if (err.message.includes('shopSlug') || err.message.includes('shop')) {

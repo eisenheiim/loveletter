@@ -756,21 +756,6 @@
                   <span id="price-label" class="font-serif text-2xl text-crimson">—</span>
                 </div>
                 <p id="price-note" class="hidden text-xs text-wine/50 mt-2 text-right"></p>
-
-                <div id="shopier-summary-products" class="hidden mt-4 pt-4 border-t border-crimson/10">
-                  <div class="flex items-center justify-between gap-3 mb-3">
-                    <div>
-                      <p class="text-wine font-medium text-sm">Shopier store products</p>
-                      <p class="text-wine/50 text-xs">These appear on the Shopier payment screen. Delete old test products before paying.</p>
-                    </div>
-                    <button type="button" id="shopier-delete-all" class="text-xs font-medium text-crimson border border-crimson/25 rounded-full px-3 py-1 hover:bg-crimson/5">
-                      Delete all
-                    </button>
-                  </div>
-                  <div id="shopier-product-list" class="space-y-2"></div>
-                  <p id="shopier-empty-note" class="hidden text-xs text-wine/45 mt-2">No leftover products.</p>
-                  <p id="shopier-cleanup-status" class="text-xs text-wine/50 mt-2 hidden"></p>
-                </div>
               </div>
 
               <div class="flex flex-col sm:flex-row gap-3">
@@ -944,11 +929,6 @@
         priceNote: document.getElementById('price-note'),
         premiumHostingItem: document.getElementById('premium-hosting-item'),
         buyerEmailWrap: document.getElementById('buyer-email-wrap'),
-        shopierSummaryProducts: document.getElementById('shopier-summary-products'),
-        shopierProductList: document.getElementById('shopier-product-list'),
-        shopierEmptyNote: document.getElementById('shopier-empty-note'),
-        shopierDeleteAll: document.getElementById('shopier-delete-all'),
-        shopierCleanupStatus: document.getElementById('shopier-cleanup-status'),
         shopierStatusWrap: document.getElementById('shopier-status-wrap'),
       };
 
@@ -969,17 +949,7 @@
         }
 
         if (config.shopierConfigured) {
-          showShopierSummarySection();
-          loadShopierListingProducts();
           loadShopierConnectionStatus();
-        } else if (els.shopierSummaryProducts) {
-          els.shopierSummaryProducts.classList.add('hidden');
-        }
-      }
-
-      function showShopierSummarySection() {
-        if (els.shopierSummaryProducts) {
-          els.shopierSummaryProducts.classList.remove('hidden');
         }
       }
 
@@ -1016,102 +986,6 @@
             error: 'Could not reach /api/shopier/status',
           });
         }
-      }
-
-      function setShopierCleanupStatus(message, isError) {
-        if (!els.shopierCleanupStatus) return;
-        els.shopierCleanupStatus.textContent = message;
-        els.shopierCleanupStatus.classList.remove('hidden', 'text-red-700', 'text-wine/50');
-        els.shopierCleanupStatus.classList.add(isError ? 'text-red-700' : 'text-wine/50');
-      }
-
-      function renderShopierProductList(products) {
-        if (!els.shopierProductList) return;
-
-        showShopierSummarySection();
-        els.shopierProductList.innerHTML = '';
-
-        if (els.shopierEmptyNote) {
-          els.shopierEmptyNote.classList.toggle('hidden', products.length > 0);
-        }
-        if (els.shopierDeleteAll) {
-          els.shopierDeleteAll.classList.toggle('hidden', products.length === 0);
-        }
-
-        products.forEach(function (product) {
-          const row = document.createElement('div');
-          row.className = 'flex items-center justify-between gap-3 p-2.5 rounded-lg bg-blush/40 border border-crimson/10';
-          row.innerHTML =
-            '<div class="min-w-0 text-left flex-1">' +
-              '<p class="text-wine text-xs font-medium truncate">' + escapeHtml(product.title || 'Untitled product') + '</p>' +
-              '<p class="text-wine/45 text-[0.65rem] truncate">ID: ' + escapeHtml(String(product.id)) + '</p>' +
-            '</div>' +
-            '<button type="button" class="shopier-delete-one shrink-0 text-xs font-medium text-white bg-crimson/90 hover:bg-crimson rounded-full px-3 py-1.5" data-product-id="' + escapeHtml(String(product.id)) + '">Delete</button>';
-          els.shopierProductList.appendChild(row);
-        });
-
-        els.shopierProductList.querySelectorAll('.shopier-delete-one').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            deleteShopierListingProduct(btn.getAttribute('data-product-id'), btn);
-          });
-        });
-      }
-
-      function escapeHtml(text) {
-        return String(text)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;');
-      }
-
-      async function loadShopierListingProducts() {
-        try {
-          const res = await fetch(API_BASE + '/api/shopier/listing-products');
-          if (!res.ok) return;
-          const data = await parseJsonResponse(res);
-          renderShopierProductList(data.products || []);
-        } catch (err) {
-          console.warn('[shopier cleanup]', err);
-        }
-      }
-
-      async function deleteShopierListingProduct(productId, buttonEl) {
-        if (!productId) return;
-        if (buttonEl) {
-          buttonEl.disabled = true;
-          buttonEl.textContent = 'Deleting…';
-        }
-        try {
-          const res = await fetch(API_BASE + '/api/shopier/listing-products/' + encodeURIComponent(productId), {
-            method: 'DELETE',
-          });
-          if (!res.ok) throw new Error('Delete failed');
-          setShopierCleanupStatus('Product deleted.', false);
-          await loadShopierListingProducts();
-        } catch (err) {
-          setShopierCleanupStatus('Could not delete product.', true);
-          if (buttonEl) {
-            buttonEl.disabled = false;
-            buttonEl.textContent = 'Delete';
-          }
-        }
-      }
-
-      async function deleteAllShopierListingProducts() {
-        try {
-          const res = await fetch(API_BASE + '/api/shopier/listing-products/cleanup', { method: 'POST' });
-          const data = await parseJsonResponse(res);
-          if (!res.ok) throw new Error(data.error || 'Cleanup failed');
-          setShopierCleanupStatus('Deleted ' + data.deleted + ' of ' + data.total + ' products.', false);
-          await loadShopierListingProducts();
-        } catch (err) {
-          setShopierCleanupStatus('Could not delete all products.', true);
-        }
-      }
-
-      if (els.shopierDeleteAll) {
-        els.shopierDeleteAll.addEventListener('click', deleteAllShopierListingProducts);
       }
 
       async function loadAppConfig() {
@@ -1158,8 +1032,6 @@
         });
         updateProgressUI();
         if (step === 3 && appConfig.shopierConfigured) {
-          showShopierSummarySection();
-          loadShopierListingProducts();
           loadShopierConnectionStatus();
         }
         window.scrollTo({ top: 0, behavior: 'smooth' });
