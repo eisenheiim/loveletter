@@ -15,7 +15,7 @@ const surpriseSiteSchema = new mongoose.Schema(
     images: { type: [String], default: [] },
     musicTrack: { type: String, default: 'romantic-piano' },
     isPaid: { type: Boolean, default: false },
-    plan: { type: String, enum: ['free', 'paid'], default: 'free' },
+    plan: { type: String, enum: ['free', 'paid'], default: 'paid' },
     shopierProductId: { type: String, default: null },
     qrCodePath: { type: String, default: null },
     shopierPaymentId: { type: String, default: null },

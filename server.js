@@ -7,9 +7,9 @@ const multer = require('multer');
 const store = require('./lib/store');
 const { generateSiteId } = require('./lib/generateId');
 const { createPaymentRequest, handleWebhook, extractDraftIdFromOrder, isPaymentConfigured } = require('./lib/shopier');
-const { generateQrForSite } = require('./lib/qr');
+const { generateQrForSite, buildWhatsAppShareUrl } = require('./lib/qr');
 const { renderSurprisePage } = require('./lib/renderSurprise');
-const { getAppMode, isFreeMode, isPaidMode, getPublicConfig } = require('./lib/mode');
+const { getAppMode, getPublicConfig } = require('./lib/mode');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -34,10 +34,6 @@ app.post(
   '/api/payment/webhook',
   express.raw({ type: 'application/json' }),
   async (req, res) => {
-    if (isFreeMode()) {
-      return res.status(400).json({ error: 'Webhooks disabled in free mode' });
-    }
-
     try {
       const result = await handleWebhook(req.body, req.headers, async (info) => {
         const { order, productId } = info;
@@ -202,8 +198,7 @@ app.post(
 );
 
 /**
- * POST /api/pay
- * Free mode: publish immediately + QR. Paid mode: Shopier checkout.
+ * POST /api/pay — Shopier checkout.
  */
 app.post('/api/pay', async (req, res) => {
   try {
@@ -233,23 +228,6 @@ app.post('/api/pay', async (req, res) => {
       });
     }
 
-    /* ─── FREE MODE: skip Shopier, publish right away ─── */
-    if (isFreeMode()) {
-      const site = await fulfillPayment(draftId, `free-${Date.now()}`);
-      if (!site) {
-        return res.status(404).json({ error: 'Draft not found.' });
-      }
-      return res.json({
-        free: true,
-        mode: 'free',
-        message: 'Surprise published for free.',
-        successUrl: `${BASE_URL}/success/${draftId}`,
-        siteUrl: `${BASE_URL}/s/${draftId}`,
-        qrCodeUrl: site.qrCodePath ? `${BASE_URL}/${site.qrCodePath}` : null,
-      });
-    }
-
-    /* ─── PAID MODE: Shopier checkout ─── */
     if (!isPaymentConfigured()) {
       return res.status(503).json({
         error:
@@ -301,7 +279,7 @@ app.post('/api/pay', async (req, res) => {
 /**
  * Dev-only: simulate successful payment without Shopier (paid mode local testing).
  */
-if (process.env.NODE_ENV !== 'production' && isPaidMode()) {
+if (process.env.NODE_ENV !== 'production') {
   app.get('/api/payment/dev-confirm/:draftId', async (req, res) => {
     try {
       const site = await fulfillPayment(req.params.draftId, `dev-${Date.now()}`);
@@ -322,12 +300,16 @@ app.get('/api/success/:id', async (req, res) => {
   if (!site) return res.status(404).json({ error: 'Not found' });
   if (!site.isPaid) return res.status(402).json({ error: 'Payment required' });
 
+  const siteUrl = `${BASE_URL}/s/${site.id}`;
+  const qrCodeUrl = site.qrCodePath ? `${BASE_URL}/${site.qrCodePath}` : null;
+
   return res.json({
     id: site.id,
     partnerName: site.partnerName,
     plan: site.plan || getAppMode(),
-    siteUrl: `${BASE_URL}/s/${site.id}`,
-    qrCodeUrl: site.qrCodePath ? `${BASE_URL}/${site.qrCodePath}` : null,
+    siteUrl,
+    qrCodeUrl,
+    whatsappShareUrl: buildWhatsAppShareUrl(siteUrl, site.partnerName),
     createdAt: site.createdAt,
   });
 });

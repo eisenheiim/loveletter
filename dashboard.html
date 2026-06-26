@@ -565,7 +565,7 @@
       <div class="text-center mb-8">
         <h1 class="font-serif text-3xl sm:text-4xl font-medium text-wine mb-2">Create Your Surprise</h1>
         <p class="text-wine/60 text-sm sm:text-base max-w-md mx-auto">Personalize your Valentine webpage in three simple steps</p>
-        <span id="mode-badge" class="inline-block mt-3 px-3 py-1 rounded-full text-xs font-medium tracking-wide bg-blush text-wine border border-crimson/15">Loading…</span>
+        <span id="mode-badge" class="inline-block mt-3 px-3 py-1 rounded-full text-xs font-medium tracking-wide bg-blush text-wine border border-crimson/20">Premium</span>
       </div>
 
       <!-- Progress bar -->
@@ -711,7 +711,7 @@
                       <p class="text-wine/50 text-xs">Fully personalized romantic experience</p>
                     </div>
                   </div>
-                  <div id="premium-hosting-item" class="summary-item hidden">
+                  <div id="premium-hosting-item" class="summary-item">
                     <span class="summary-check">
                       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                     </span>
@@ -742,7 +742,7 @@
                   Back
                 </button>
                 <button type="button" id="checkout-btn" class="btn-primary btn-checkout flex-1">
-                  Create My Surprise &amp; Get QR Code
+                  Sürprizimi Oluştur &amp; Öde
                 </button>
               </div>
             </div>
@@ -838,12 +838,10 @@
       const API_BASE = window.VALENTINE_API_BASE || '';
 
       let appConfig = {
-        mode: 'free',
-        isFree: true,
-        isPaid: false,
-        priceDisplay: 'Ücretsiz',
-        checkoutButton: 'Sürprizimi Oluştur & QR Kod Al',
-        packageTitle: 'Ücretsiz Paket',
+        mode: 'paid',
+        priceDisplay: '₺699.90',
+        checkoutButton: 'Sürprizimi Oluştur & Öde',
+        packageTitle: 'Premium Paket',
       };
       const state = {
         currentStep: 1,
@@ -898,20 +896,10 @@
         appConfig = config;
 
         if (els.modeBadge) {
-          els.modeBadge.textContent = config.isFree ? 'Ücretsiz Mod' : 'Premium Mod';
-          els.modeBadge.className = config.isFree
-            ? 'inline-block mt-3 px-3 py-1 rounded-full text-xs font-medium tracking-wide bg-emerald-50 text-emerald-800 border border-emerald-200'
-            : 'inline-block mt-3 px-3 py-1 rounded-full text-xs font-medium tracking-wide bg-blush text-wine border border-crimson/20';
+          els.modeBadge.textContent = 'Premium';
         }
-
         if (els.packageTitle) els.packageTitle.textContent = config.packageTitle;
         if (els.priceLabel) els.priceLabel.textContent = config.priceDisplay;
-        if (els.premiumHostingItem) {
-          els.premiumHostingItem.classList.toggle('hidden', config.isFree);
-        }
-        if (els.buyerEmailWrap) {
-          els.buyerEmailWrap.classList.toggle('hidden', config.isFree);
-        }
         if (els.checkoutBtn) {
           els.checkoutBtn.textContent = config.checkoutButton;
         }
@@ -1233,8 +1221,8 @@
           }
 
           setCheckoutOverlayMessage(
-            appConfig.isFree ? 'Sürprizin yayınlanıyor…' : 'Redirecting to secure checkout…',
-            appConfig.isFree ? 'QR kodun hazırlanıyor' : 'Connecting to Shopier'
+            'Güvenli ödemeye yönlendiriliyorsun…',
+            'Shopier bağlantısı kuruluyor'
           );
 
           const payRes = await fetch(API_BASE + '/api/pay', {
@@ -1255,7 +1243,7 @@
           console.log('[Valentine Surprise — Draft Created]', draftData);
           console.log('[Valentine Surprise — Payment Init]', payData);
 
-          if (payData.alreadyPaid || payData.free) {
+          if (payData.alreadyPaid) {
             window.location.href = payData.successUrl;
             return;
           }
