@@ -6,7 +6,7 @@ const fs = require('fs');
 const multer = require('multer');
 const store = require('./lib/store');
 const { generateSiteId } = require('./lib/generateId');
-const { resolveDraftFromPayment, isPaymentConfigured, testShopierConnection } = require('./lib/shopier');
+const { resolveDraftFromPayment, isPaymentConfigured, testShopierConnection, deleteShopierProduct } = require('./lib/shopier');
 const { initializePayment, buildPayloadFromDraft, ShopierApiError } = require('./lib/shopier-rest');
 const { getCheckoutPaymentTemplate } = require('./lib/mode');
 const { createShopierPaymentRouter, createShopierWebhookHandler } = require('./routes/shopierPayment');
@@ -45,6 +45,12 @@ async function fulfillPayment(draftId, shopierPaymentId) {
 
   const { relativePath } = await generateQrForSite(draftId, BASE_URL);
   const updated = await store.updateById(draftId, { qrCodePath: relativePath });
+
+  if (site.shopierProductId) {
+    deleteShopierProduct(site.shopierProductId).catch((err) => {
+      console.warn('[shopier] post-payment product cleanup failed', site.shopierProductId, err.message);
+    });
+  }
 
   return updated;
 }
@@ -273,12 +279,17 @@ app.post('/api/pay', async (req, res) => {
 
     const payment = await initializePayment(checkoutInput);
 
+    await store.updateById(draftId, {
+      shopierProductId: payment.product_id || payment.payment_id,
+    });
+
     return res.json({
       mode: 'paid',
       draftId,
       successUrl: `${BASE_URL}/success/${draftId}`,
       payment_url: payment.payment_url,
       checkoutUrl: payment.payment_url,
+      checkoutHtml: payment.checkout_html,
       payment_id: payment.payment_id,
       paymentTotal: getPublicConfig().priceDisplay,
     });

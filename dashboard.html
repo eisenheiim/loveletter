@@ -1374,14 +1374,14 @@
             return;
           }
 
-          var checkoutTarget = payData.payment_url || payData.checkoutUrl;
-          if (checkoutTarget) {
-            window.location.href = checkoutTarget;
+          if (payData.checkoutHtml) {
+            openCheckoutHtml(payData.checkoutHtml);
             return;
           }
 
-          if (payData.checkoutHtml) {
-            openCheckoutHtml(payData.checkoutHtml);
+          var checkoutTarget = payData.payment_url || payData.checkoutUrl;
+          if (checkoutTarget) {
+            window.location.href = checkoutTarget;
             return;
           }
 
