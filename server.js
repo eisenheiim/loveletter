@@ -6,7 +6,7 @@ const fs = require('fs');
 const multer = require('multer');
 const store = require('./lib/store');
 const { generateSiteId } = require('./lib/generateId');
-const { createPaymentRequest, parseCallback, isConfigured } = require('./lib/shopier');
+const { createPaymentRequest, handleWebhook, extractDraftIdFromOrder, isConfigured } = require('./lib/shopier');
 const { generateQrForSite } = require('./lib/qr');
 const { renderSurprisePage } = require('./lib/renderSurprise');
 const { getAppMode, isFreeMode, isPaidMode, getPublicConfig } = require('./lib/mode');
@@ -29,8 +29,52 @@ app.use((req, res, next) => {
 
 app.use('/uploads', express.static(path.join(ROOT, 'uploads')));
 
-/* Shopier callback must receive urlencoded body */
-app.use('/api/payment/callback', express.urlencoded({ extended: false }));
+/* Shopier PAT webhook — raw body required for signature verification */
+app.post(
+  '/api/payment/webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    if (isFreeMode()) {
+      return res.status(400).json({ error: 'Webhooks disabled in free mode' });
+    }
+
+    try {
+      const result = await handleWebhook(req.body, req.headers, async (info) => {
+        const { order, productId } = info;
+        let draftId = extractDraftIdFromOrder(order, productId);
+
+        if (!draftId) {
+          const byProduct = await store.findByShopierProductId(productId);
+          if (byProduct) draftId = byProduct.id;
+        }
+
+        if (!draftId) {
+          console.warn('[payment/webhook] Could not resolve draft for product', productId);
+          return;
+        }
+
+        await fulfillPayment(draftId, order.id || productId);
+        console.log('[payment/webhook] Fulfilled draft', draftId);
+      });
+
+      return res.status(200).json({
+        received: true,
+        processed: result.processed,
+        event: result.event.type,
+      });
+    } catch (err) {
+      console.error('[payment/webhook]', err);
+      return res.status(400).json({ error: 'Webhook verification failed' });
+    }
+  }
+);
+
+/* Legacy OSB callback — redirect users to webhook-based PAT flow */
+app.post('/api/payment/callback', express.urlencoded({ extended: false }), (_req, res) => {
+  res.status(410).send(
+    'Legacy OSB callback is disabled. Configure Shopier PAT webhooks at /api/payment/webhook'
+  );
+});
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -208,22 +252,23 @@ app.post('/api/pay', async (req, res) => {
     /* ─── PAID MODE: Shopier required ─── */
     if (!isConfigured()) {
       return res.status(503).json({
-        error: 'Ödeme sistemi henüz yapılandırılmadı. Shopier bilgilerini ekleyin veya APP_MODE=free kullanın.',
+        error:
+          'Shopier yapılandırılmadı. SHOPIER_PAT, SHOPIER_SHOP_SLUG ve SHOPIER_API_SECRET (veya SHOPIER_WEBHOOK_TOKEN) ekleyin veya APP_MODE=free kullanın.',
         mode: 'paid',
         shopierConfigured: false,
       });
     }
 
-    const payment = createPaymentRequest({
-      draftId,
-      buyerName: draft.senderName,
-      buyerEmail: buyerEmail || draft.buyerEmail,
-      buyerPhone: buyerPhone || draft.buyerPhone,
+    const payment = await createPaymentRequest({ draftId });
+
+    await store.updateById(draftId, {
+      shopierProductId: payment.productId,
     });
 
     return res.json({
       mode: 'paid',
       draftId,
+      successUrl: `${BASE_URL}/success/${draftId}`,
       checkoutUrl: payment.checkoutUrl,
       checkoutHtml: payment.checkoutHtml,
     });
@@ -234,41 +279,7 @@ app.post('/api/pay', async (req, res) => {
 });
 
 /**
- * POST /api/payment/callback
- * Shopier OSB notification — paid mode only.
- */
-app.post('/api/payment/callback', async (req, res) => {
-  if (isFreeMode()) {
-    return res.status(400).send('Shopier callback disabled in free mode');
-  }
-
-  try {
-    const result = parseCallback(req.body);
-
-    if (!result.verified) {
-      console.warn('[payment/callback] Invalid signature:', result.reason);
-      return res.status(400).send('Invalid signature');
-    }
-
-    if (!result.success) {
-      return res.redirect(`${BASE_URL}/payment-failed?draft=${result.draftId}`);
-    }
-
-    const site = await fulfillPayment(result.draftId, result.paymentId);
-    if (!site) {
-      return res.status(404).send('Draft not found');
-    }
-
-    /* Shopier expects a redirect after server-side notification handling */
-    return res.redirect(`${BASE_URL}/success/${result.draftId}`);
-  } catch (err) {
-    console.error('[payment/callback]', err);
-    return res.status(500).send('Callback processing failed');
-  }
-});
-
-/**
- * Dev-only fallback (legacy) — prefer APP_MODE=free instead.
+ * Dev-only: simulate successful payment without Shopier (paid mode local testing).
  */
 if (process.env.NODE_ENV !== 'production' && isPaidMode()) {
   app.get('/api/payment/dev-confirm/:draftId', async (req, res) => {
@@ -336,6 +347,20 @@ app.get('/s/:id', async (req, res) => {
 
 app.get('/success/:id', (_req, res) => {
   res.sendFile(path.join(ROOT, 'success.html'));
+});
+
+app.get('/payment-return', (req, res) => {
+  const draftId =
+    req.query.platform_order_id ||
+    req.query.order_id ||
+    req.query.draft ||
+    req.query.id;
+
+  if (draftId && /^v2026-[a-f0-9]+$/i.test(String(draftId))) {
+    return res.redirect(`${BASE_URL}/success/${draftId}`);
+  }
+
+  res.sendFile(path.join(ROOT, 'payment-return.html'));
 });
 
 app.get('/payment-pending', (_req, res) => {

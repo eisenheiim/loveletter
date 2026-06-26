@@ -1249,6 +1249,10 @@
             return;
           }
 
+          if (payData.successUrl && payData.checkoutHtml) {
+            sessionStorage.setItem('valentine_success_url', payData.successUrl);
+          }
+
           if (payData.mock && payData.checkoutUrl) {
             window.location.href = payData.checkoutUrl;
             return;

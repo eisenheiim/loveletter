@@ -11,6 +11,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@nopeion/shopier": "^2.0.0",
     "cheerio": "^1.0.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
