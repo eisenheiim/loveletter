@@ -6,7 +6,7 @@ const fs = require('fs');
 const multer = require('multer');
 const store = require('./lib/store');
 const { generateSiteId } = require('./lib/generateId');
-const { createPaymentRequest, handleWebhook, extractDraftIdFromOrder, isPaymentConfigured } = require('./lib/shopier');
+const { createPaymentRequest, handleWebhook, extractDraftIdFromOrder, isPaymentConfigured, deleteShopierProduct, listCheckoutListingProducts, deleteAllCheckoutListingProducts } = require('./lib/shopier');
 const { generateQrForSite, buildWhatsAppShareUrl } = require('./lib/qr');
 const { renderSurprisePage } = require('./lib/renderSurprise');
 const { getAppMode, getPublicConfig } = require('./lib/mode');
@@ -90,7 +90,7 @@ function createImageUploader() {
         cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${safeExt}`);
       },
     }),
-    limits: { fileSize: 8 * 1024 * 1024, files: 3 },
+    limits: { fileSize: 8 * 1024 * 1024, files: 5 },
     fileFilter(_req, file, cb) {
       if (!file.mimetype.startsWith('image/')) {
         return cb(new Error('Only image uploads are allowed'));
@@ -119,7 +119,15 @@ async function fulfillPayment(draftId, shopierPaymentId) {
   await store.markPaid(draftId, { shopierPaymentId });
 
   const { relativePath } = await generateQrForSite(draftId, BASE_URL);
-  return store.updateById(draftId, { qrCodePath: relativePath });
+  const updated = await store.updateById(draftId, { qrCodePath: relativePath });
+
+  if (site.shopierProductId) {
+    deleteShopierProduct(site.shopierProductId).catch((err) => {
+      console.warn('[shopier] post-payment product cleanup failed', site.shopierProductId, err.message);
+    });
+  }
+
+  return updated;
 }
 
 /* ═══════════════════════════════════════ */
@@ -134,13 +142,67 @@ app.get('/api/config', (_req, res) => {
 });
 
 /**
+ * GET /api/shopier/listing-products — leftover custom-listing products in Shopier.
+ */
+app.get('/api/shopier/listing-products', async (_req, res) => {
+  if (!isPaymentConfigured()) {
+    return res.status(503).json({ error: 'Shopier is not configured.' });
+  }
+  try {
+    const products = await listCheckoutListingProducts();
+    return res.json({
+      products: products.map((p) => ({
+        id: p.id,
+        title: p.title,
+        dateCreated: p.dateCreated || null,
+      })),
+    });
+  } catch (err) {
+    console.error('[shopier/listing-products]', err);
+    return res.status(500).json({ error: 'Could not load Shopier products.' });
+  }
+});
+
+/**
+ * DELETE /api/shopier/listing-products/:id
+ */
+app.delete('/api/shopier/listing-products/:id', async (req, res) => {
+  if (!isPaymentConfigured()) {
+    return res.status(503).json({ error: 'Shopier is not configured.' });
+  }
+  try {
+    await deleteShopierProduct(req.params.id);
+    return res.json({ deleted: true, id: req.params.id });
+  } catch (err) {
+    console.error('[shopier/delete-product]', err);
+    return res.status(500).json({ error: 'Could not delete Shopier product.' });
+  }
+});
+
+/**
+ * POST /api/shopier/listing-products/cleanup — delete all custom-listing products.
+ */
+app.post('/api/shopier/listing-products/cleanup', async (_req, res) => {
+  if (!isPaymentConfigured()) {
+    return res.status(503).json({ error: 'Shopier is not configured.' });
+  }
+  try {
+    const result = await deleteAllCheckoutListingProducts();
+    return res.json(result);
+  } catch (err) {
+    console.error('[shopier/cleanup]', err);
+    return res.status(500).json({ error: 'Could not clean up Shopier products.' });
+  }
+});
+
+/**
  * POST /api/create-draft
  * Saves form data + uploaded images as an unpaid draft.
  */
 app.post(
   '/api/create-draft',
   assignDraftId,
-  upload.array('images', 3),
+  upload.array('images', 5),
   async (req, res) => {
     try {
       const senderName = String(req.body.senderName || req.body.userName || '').trim();
@@ -231,11 +293,15 @@ app.post('/api/pay', async (req, res) => {
     if (!isPaymentConfigured()) {
       return res.status(503).json({
         error:
-          'Shopier ödeme ayarları eksik. Render\'da SHOPIER_PAT ve SHOPIER_SHOP_SLUG kontrol edin. (Client Secret ödeme başlatmak için gerekmez.)',
+          'Shopier payment is not configured. Set SHOPIER_PAT and SHOPIER_SHOP_SLUG on the server.',
         mode: 'paid',
         shopierConfigured: false,
-        hint: 'PAT = Kişisel Erişim Anahtarı (Client ID değil)',
+        hint: 'PAT = Personal Access Token (not Client ID)',
       });
+    }
+
+    if (draft.shopierProductId) {
+      deleteShopierProduct(draft.shopierProductId).catch(() => {});
     }
 
     const payment = await createPaymentRequest({ draftId });
@@ -254,15 +320,15 @@ app.post('/api/pay', async (req, res) => {
   } catch (err) {
     console.error('[pay]', err);
 
-    let message = 'Ödeme başlatılamadı. Shopier ayarlarını kontrol edin.';
+    let message = 'Payment could not be started. Check your Shopier settings.';
     if (err.message) {
       if (/invalid media url|media\[0\]\.url/i.test(err.message)) {
         message =
-          'Ürün görseli URL\'si Shopier formatına uymuyor. Render\'da SHOPIER_PRODUCT_IMAGE_URL değişkenini silin veya .jpg/.png ile biten bir adres yazın (ör. https://site.com/image.jpg). Varsayılan: BASE_URL/product-cover.jpg';
+          'Product image URL is invalid for Shopier. Remove SHOPIER_PRODUCT_IMAGE_URL or use a URL ending in .jpg or .png. Default: BASE_URL/product-cover.jpg';
       } else if (err.message.includes('401') || err.message.includes('Unauthorized') || err.message.includes('PAT')) {
-        message = 'Shopier PAT geçersiz. SHOPIER_PAT alanına Kişisel Erişim Anahtarını yazın (Client ID değil).';
+        message = 'Invalid Shopier PAT. Set SHOPIER_PAT to your Personal Access Token (not Client ID).';
       } else if (err.message.includes('shopSlug') || err.message.includes('shop')) {
-        message = 'Mağaza slug hatalı. SHOPIER_SHOP_SLUG değerini kontrol edin.';
+        message = 'Invalid shop slug. Check SHOPIER_SHOP_SLUG.';
       } else {
         message = err.message;
       }

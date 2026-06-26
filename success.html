@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sürprizin Hazır!</title>
+  <title>Your Surprise Is Ready!</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -37,17 +37,17 @@
 </head>
 <body class="flex items-center justify-center p-6">
   <div class="card max-w-md w-full p-8 text-center">
-    <p class="text-sm tracking-[0.2em] uppercase text-red-700/60 mb-3">Ödeme başarılı</p>
-    <h1 class="font-['Cormorant_Garamond'] text-3xl text-[#7f0a1e] mb-2">Sürprizin yayında!</h1>
-    <p id="subtitle" class="text-[#9b1b30]/70 text-sm mb-6">Kalp QR kodun hazırlanıyor…</p>
+    <p class="text-sm tracking-[0.2em] uppercase text-red-700/60 mb-3">Payment successful</p>
+    <h1 class="font-['Cormorant_Garamond'] text-3xl text-[#7f0a1e] mb-2">Your surprise is live!</h1>
+    <p id="subtitle" class="text-[#9b1b30]/70 text-sm mb-6">Preparing your heart-shaped QR code…</p>
 
     <div id="qr-wrap" class="hidden mb-6">
       <div class="qr-frame">
-        <img id="qr-image" alt="Kalp şeklinde QR kod" />
+        <img id="qr-image" alt="Heart-shaped QR code" />
       </div>
-      <p class="text-xs text-[#9b1b30]/55 mt-3">QR kodu tarat veya linki paylaş</p>
+      <p class="text-xs text-[#9b1b30]/55 mt-3">Scan the QR code or share the link</p>
       <button id="qr-download" type="button" class="inline-block mt-3 text-sm text-red-700 underline">
-        Kalp QR Kodunu İndir
+        Download Heart QR Code
       </button>
     </div>
 
@@ -58,13 +58,13 @@
           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
           <path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.75.75 0 00.918.918l4.458-1.495A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.714 9.714 0 01-4.876-1.304l-.349-.207-2.655.891.891-2.655-.207-.349A9.714 9.714 0 012.25 12C2.25 6.9 6.9 2.25 12 2.25S21.75 6.9 21.75 12 17.1 21.75 12 21.75z"/>
         </svg>
-        WhatsApp ile Gönder
+        Share on WhatsApp
       </a>
       <a id="site-link" href="#" class="block w-full py-3 rounded-full bg-gradient-to-r from-red-500 to-red-800 text-white font-medium text-sm">
-        Sürpriz Sayfasını Aç
+        Open Surprise Page
       </a>
       <button id="copy-link" type="button" class="block w-full py-3 rounded-full border border-red-300/40 text-[#9b1b30] text-sm">
-        Linki Kopyala
+        Copy Link
       </button>
     </div>
   </div>
@@ -74,16 +74,14 @@
       const id = location.pathname.split('/').pop();
       const apiUrl = '/api/success/' + encodeURIComponent(id);
       let pollTimer = null;
-      let pageData = null;
 
       function partnerLabel(name) {
-        return name ? name : 'sevgiline';
+        return name || 'your valentine';
       }
 
       function showReady(data) {
-        pageData = data;
         document.getElementById('subtitle').textContent =
-          partnerLabel(data.partnerName) + ' için hazır — QR kodu tarat veya WhatsApp ile gönder.';
+          'Ready for ' + partnerLabel(data.partnerName) + ' — scan the QR or share on WhatsApp.';
         document.getElementById('site-link').href = data.siteUrl;
 
         if (data.whatsappShareUrl) {
@@ -105,7 +103,7 @@
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;
-              a.download = 'kalp-qr-' + id + '.png';
+              a.download = 'heart-qr-' + id + '.png';
               document.body.appendChild(a);
               a.click();
               a.remove();
@@ -118,7 +116,7 @@
 
         document.getElementById('copy-link').addEventListener('click', function () {
           navigator.clipboard.writeText(data.siteUrl).then(function () {
-            document.getElementById('copy-link').textContent = 'Kopyalandı!';
+            document.getElementById('copy-link').textContent = 'Copied!';
           });
         });
       }
@@ -134,14 +132,14 @@
           .catch(function (err) {
             if (err.message === 'pending' && attempt < 30) {
               document.getElementById('subtitle').textContent =
-                'Ödemen onaylanıyor… (' + (attempt + 1) + '/30)';
+                'Confirming your payment… (' + (attempt + 1) + '/30)';
               pollTimer = setTimeout(function () {
                 loadSuccess(attempt + 1);
               }, 2000);
               return;
             }
             document.getElementById('subtitle').textContent =
-              'Ödeme henüz onaylanmadı. Birkaç saniye sonra sayfayı yenile.';
+              'Payment not confirmed yet. Please refresh in a few seconds.';
           });
       }
 

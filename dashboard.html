@@ -612,7 +612,7 @@
                   <input type="text" id="partner-name" class="form-input" placeholder="e.g. Jordan" />
                 </div>
                 <div>
-                  <label class="form-label" for="main-message">Main Valentine Message</label>
+                  <label class="form-label" for="main-message">Main Letter Message</label>
                   <textarea id="main-message" class="form-input resize-none" rows="4" placeholder="In a world of ordinary moments, you are my most beautiful forever."></textarea>
                 </div>
               </div>
@@ -628,31 +628,49 @@
             <!-- Step 2: Media & Memories -->
             <div id="wizard-step-2" class="wizard-step" data-step="2">
               <h2 class="font-serif text-2xl text-wine mb-1">Media &amp; Memories</h2>
-              <p class="text-wine/55 text-sm mb-6">Upload up to three photos that tell your love story.</p>
+              <p class="text-wine/55 text-sm mb-6">Upload five photos: four for Our Story and one for the photo puzzle.</p>
 
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
-                  <p class="form-label text-center mb-2">Memory 1</p>
+                  <p class="form-label text-center mb-2">Our Story 1</p>
                   <div class="upload-zone" data-upload-index="0">
-                    <input type="file" accept="image/*" aria-label="Upload memory photo 1" />
+                    <input type="file" accept="image/*" aria-label="Upload our story photo 1" />
                     <svg class="w-8 h-8 text-crimson/35" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     <span class="upload-hint text-xs text-wine/45 text-center px-2">Drag &amp; drop or tap</span>
                     <div class="upload-overlay"><span class="text-cream text-xs font-medium">Change photo</span></div>
                   </div>
                 </div>
                 <div>
-                  <p class="form-label text-center mb-2">Memory 2</p>
+                  <p class="form-label text-center mb-2">Our Story 2</p>
                   <div class="upload-zone" data-upload-index="1">
-                    <input type="file" accept="image/*" aria-label="Upload memory photo 2" />
+                    <input type="file" accept="image/*" aria-label="Upload our story photo 2" />
                     <svg class="w-8 h-8 text-crimson/35" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     <span class="upload-hint text-xs text-wine/45 text-center px-2">Drag &amp; drop or tap</span>
                     <div class="upload-overlay"><span class="text-cream text-xs font-medium">Change photo</span></div>
                   </div>
                 </div>
                 <div>
-                  <p class="form-label text-center mb-2">Memory 3</p>
+                  <p class="form-label text-center mb-2">Our Story 3</p>
                   <div class="upload-zone" data-upload-index="2">
-                    <input type="file" accept="image/*" aria-label="Upload memory photo 3" />
+                    <input type="file" accept="image/*" aria-label="Upload our story photo 3" />
+                    <svg class="w-8 h-8 text-crimson/35" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <span class="upload-hint text-xs text-wine/45 text-center px-2">Drag &amp; drop or tap</span>
+                    <div class="upload-overlay"><span class="text-cream text-xs font-medium">Change photo</span></div>
+                  </div>
+                </div>
+                <div>
+                  <p class="form-label text-center mb-2">Our Story 4</p>
+                  <div class="upload-zone" data-upload-index="3">
+                    <input type="file" accept="image/*" aria-label="Upload our story photo 4" />
+                    <svg class="w-8 h-8 text-crimson/35" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <span class="upload-hint text-xs text-wine/45 text-center px-2">Drag &amp; drop or tap</span>
+                    <div class="upload-overlay"><span class="text-cream text-xs font-medium">Change photo</span></div>
+                  </div>
+                </div>
+                <div>
+                  <p class="form-label text-center mb-2">Puzzle Photo</p>
+                  <div class="upload-zone" data-upload-index="4">
+                    <input type="file" accept="image/*" aria-label="Upload puzzle photo" />
                     <svg class="w-8 h-8 text-crimson/35" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     <span class="upload-hint text-xs text-wine/45 text-center px-2">Drag &amp; drop or tap</span>
                     <div class="upload-overlay"><span class="text-cream text-xs font-medium">Change photo</span></div>
@@ -696,6 +714,19 @@
                   <label class="form-label" for="buyer-email">Your Email <span class="text-wine/40 font-normal">(for payment receipt)</span></label>
                   <input type="email" id="buyer-email" class="form-input" placeholder="you@example.com" autocomplete="email" />
                 </div>
+              </div>
+
+              <!-- Shopier leftover products -->
+              <div id="shopier-cleanup-wrap" class="hidden mb-6 p-4 rounded-xl border border-crimson/15 bg-blush/30">
+                <div class="flex items-start justify-between gap-3 mb-3">
+                  <div>
+                    <h4 class="text-wine font-medium text-sm">Shopier checkout products</h4>
+                    <p class="text-wine/55 text-xs mt-1">Remove leftover products from previous test checkouts so they do not appear in payment.</p>
+                  </div>
+                  <button type="button" id="shopier-delete-all" class="text-xs text-crimson underline whitespace-nowrap">Delete all</button>
+                </div>
+                <div id="shopier-product-list" class="space-y-2"></div>
+                <p id="shopier-cleanup-status" class="text-xs text-wine/50 mt-2 hidden"></p>
               </div>
 
               <!-- Purchase summary -->
@@ -742,7 +773,7 @@
                   Back
                 </button>
                 <button type="button" id="checkout-btn" class="btn-primary btn-checkout flex-1">
-                  Sürprizimi Oluştur &amp; Öde
+                  Create My Surprise &amp; Pay
                 </button>
               </div>
             </div>
@@ -779,16 +810,23 @@
                   <section class="px-4 pb-4">
                     <p class="preview-section-label text-center mb-2">Our Story</p>
                     <h3 class="font-serif text-lg text-wine text-center mb-3">Memories</h3>
-                    <div class="grid grid-cols-3 gap-2">
+                    <div class="grid grid-cols-2 gap-2 mb-2">
                       <div class="preview-photo" data-preview-photo="0">
-                        <span class="text-[0.55rem] text-crimson/40">Photo 1</span>
+                        <span class="text-[0.55rem] text-crimson/40">Story 1</span>
                       </div>
                       <div class="preview-photo" data-preview-photo="1">
-                        <span class="text-[0.55rem] text-crimson/40">Photo 2</span>
+                        <span class="text-[0.55rem] text-crimson/40">Story 2</span>
                       </div>
                       <div class="preview-photo" data-preview-photo="2">
-                        <span class="text-[0.55rem] text-crimson/40">Photo 3</span>
+                        <span class="text-[0.55rem] text-crimson/40">Story 3</span>
                       </div>
+                      <div class="preview-photo" data-preview-photo="3">
+                        <span class="text-[0.55rem] text-crimson/40">Story 4</span>
+                      </div>
+                    </div>
+                    <p class="preview-section-label text-center mb-1">Puzzle</p>
+                    <div class="preview-photo mx-auto max-w-[48%]" data-preview-photo="4">
+                      <span class="text-[0.55rem] text-crimson/40">Puzzle photo</span>
                     </div>
                   </section>
 
@@ -839,17 +877,18 @@
 
       let appConfig = {
         mode: 'paid',
-        priceDisplay: '₺699.90',
-        checkoutButton: 'Sürprizimi Oluştur & Öde',
-        packageTitle: 'Premium Paket',
+        shopierConfigured: false,
+        priceDisplay: '€1.00',
+        checkoutButton: 'Create My Surprise & Pay',
+        packageTitle: 'Premium Package',
       };
       const state = {
         currentStep: 1,
         userName: '',
         partnerName: '',
         mainMessage: 'In a world of ordinary moments,\nyou are my most beautiful\nforever.',
-        photos: [null, null, null],
-        photoFiles: [null, null, null],
+        photos: [null, null, null, null, null],
+        photoFiles: [null, null, null, null, null],
         whyLoveYou: '',
         music: 'romantic-piano',
         buyerEmail: '',
@@ -864,7 +903,13 @@
         'none': 'No Music',
       };
 
-      const PHOTO_CAPTIONS = ['The day everything changed', 'Our first adventure', 'A quiet evening'];
+      const PHOTO_CAPTIONS = [
+        'The day everything changed',
+        'Our first adventure',
+        'A quiet evening',
+        'The moment I knew',
+        'Puzzle photo',
+      ];
 
       /* ─── DOM refs ─── */
       const els = {
@@ -890,6 +935,10 @@
         priceLabel: document.getElementById('price-label'),
         premiumHostingItem: document.getElementById('premium-hosting-item'),
         buyerEmailWrap: document.getElementById('buyer-email-wrap'),
+        shopierCleanupWrap: document.getElementById('shopier-cleanup-wrap'),
+        shopierProductList: document.getElementById('shopier-product-list'),
+        shopierDeleteAll: document.getElementById('shopier-delete-all'),
+        shopierCleanupStatus: document.getElementById('shopier-cleanup-status'),
       };
 
       function applyAppConfig(config) {
@@ -903,6 +952,87 @@
         if (els.checkoutBtn) {
           els.checkoutBtn.textContent = config.checkoutButton;
         }
+
+        if (config.shopierConfigured) {
+          loadShopierListingProducts();
+        }
+      }
+
+      function setShopierCleanupStatus(message, isError) {
+        if (!els.shopierCleanupStatus) return;
+        els.shopierCleanupStatus.textContent = message;
+        els.shopierCleanupStatus.classList.remove('hidden', 'text-red-700', 'text-wine/50');
+        els.shopierCleanupStatus.classList.add(isError ? 'text-red-700' : 'text-wine/50');
+      }
+
+      function renderShopierProductList(products) {
+        if (!els.shopierProductList || !els.shopierCleanupWrap) return;
+
+        els.shopierProductList.innerHTML = '';
+        if (!products.length) {
+          els.shopierCleanupWrap.classList.add('hidden');
+          return;
+        }
+
+        els.shopierCleanupWrap.classList.remove('hidden');
+        products.forEach(function (product) {
+          const row = document.createElement('div');
+          row.className = 'flex items-center justify-between gap-3 p-2 rounded-lg bg-white/70 border border-crimson/10';
+          row.innerHTML =
+            '<div class="min-w-0 text-left">' +
+              '<p class="text-wine text-xs font-medium truncate">' + (product.title || 'Untitled product') + '</p>' +
+              '<p class="text-wine/45 text-[0.65rem] truncate">ID: ' + product.id + '</p>' +
+            '</div>' +
+            '<button type="button" class="shopier-delete-one text-xs text-crimson underline whitespace-nowrap" data-product-id="' + product.id + '">Delete</button>';
+          els.shopierProductList.appendChild(row);
+        });
+
+        els.shopierProductList.querySelectorAll('.shopier-delete-one').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            deleteShopierListingProduct(btn.getAttribute('data-product-id'));
+          });
+        });
+      }
+
+      async function loadShopierListingProducts() {
+        try {
+          const res = await fetch(API_BASE + '/api/shopier/listing-products');
+          if (!res.ok) return;
+          const data = await parseJsonResponse(res);
+          renderShopierProductList(data.products || []);
+        } catch (err) {
+          console.warn('[shopier cleanup]', err);
+        }
+      }
+
+      async function deleteShopierListingProduct(productId) {
+        if (!productId) return;
+        try {
+          const res = await fetch(API_BASE + '/api/shopier/listing-products/' + encodeURIComponent(productId), {
+            method: 'DELETE',
+          });
+          if (!res.ok) throw new Error('Delete failed');
+          setShopierCleanupStatus('Product deleted.', false);
+          await loadShopierListingProducts();
+        } catch (err) {
+          setShopierCleanupStatus('Could not delete product.', true);
+        }
+      }
+
+      async function deleteAllShopierListingProducts() {
+        try {
+          const res = await fetch(API_BASE + '/api/shopier/listing-products/cleanup', { method: 'POST' });
+          const data = await parseJsonResponse(res);
+          if (!res.ok) throw new Error(data.error || 'Cleanup failed');
+          setShopierCleanupStatus('Deleted ' + data.deleted + ' of ' + data.total + ' products.', false);
+          await loadShopierListingProducts();
+        } catch (err) {
+          setShopierCleanupStatus('Could not delete all products.', true);
+        }
+      }
+
+      if (els.shopierDeleteAll) {
+        els.shopierDeleteAll.addEventListener('click', deleteAllShopierListingProducts);
       }
 
       async function loadAppConfig() {
@@ -948,6 +1078,9 @@
           panel.classList.toggle('active', parseInt(panel.dataset.step, 10) === step);
         });
         updateProgressUI();
+        if (step === 3 && appConfig.shopierConfigured) {
+          loadShopierListingProducts();
+        }
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
 
@@ -967,6 +1100,15 @@
             els.mainMessage.focus();
             els.mainMessage.style.borderColor = 'rgba(220, 38, 38, 0.6)';
             return false;
+          }
+        }
+        if (step === 2) {
+          for (let i = 0; i < 5; i += 1) {
+            if (!state.photoFiles[i]) {
+              const zone = document.querySelector('[data-upload-index="' + i + '"]');
+              if (zone) zone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              return false;
+            }
           }
         }
         return true;
@@ -1196,13 +1338,17 @@
         try {
           return JSON.parse(text);
         } catch {
-          throw new Error(res.status === 404 ? 'Sunucu API bulunamadı. Site backend ile mi çalışıyor?' : (text.slice(0, 120) || 'Sunucu hatası'));
+          throw new Error(res.status === 404 ? 'API not found. Is the backend server running?' : (text.slice(0, 120) || 'Server error'));
         }
       }
 
       els.checkoutBtn.addEventListener('click', async function () {
         if (!validateStep(1)) {
           showStep(1);
+          return;
+        }
+        if (!validateStep(2)) {
+          showStep(2);
           return;
         }
 
@@ -1217,12 +1363,12 @@
           });
           const draftData = await parseJsonResponse(draftRes);
           if (!draftRes.ok) {
-            throw new Error(draftData.error || 'Taslak kaydedilemedi');
+            throw new Error(draftData.error || 'Could not save draft');
           }
 
           setCheckoutOverlayMessage(
-            'Güvenli ödemeye yönlendiriliyorsun…',
-            'Shopier bağlantısı kuruluyor'
+            'Redirecting to secure checkout…',
+            'Connecting to Shopier'
           );
 
           const payRes = await fetch(API_BASE + '/api/pay', {
@@ -1235,7 +1381,7 @@
           });
           const payData = await parseJsonResponse(payRes);
           if (!payRes.ok) {
-            var payErr = payData.error || 'Ödeme başlatılamadı';
+            var payErr = payData.error || 'Payment could not be started';
             if (payData.hint) payErr += ' — ' + payData.hint;
             throw new Error(payErr);
           }
@@ -1270,7 +1416,7 @@
           throw new Error('No checkout URL returned from server');
         } catch (err) {
           console.error('[Valentine Surprise — Checkout Error]', err);
-          setCheckoutOverlayMessage('Bir şeyler ters gitti', err.message || 'Lütfen tekrar deneyin');
+          setCheckoutOverlayMessage('Something went wrong', err.message || 'Please try again');
           setTimeout(function () {
             els.checkoutOverlay.classList.remove('visible');
             setCheckoutOverlayMessage('Redirecting to secure checkout…', 'Preparing your surprise');

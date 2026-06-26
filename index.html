@@ -994,16 +994,6 @@
             <p class="text-wine/75 text-base sm:text-lg mt-2">You were the one I&apos;d been waiting for</p>
           </article>
         </div>
-
-        <!-- Centered finale chapter -->
-        <article class="reveal story-card flex flex-col items-center text-center mt-10 sm:mt-14 max-w-md mx-auto">
-          <span class="story-chapter-num mb-4">05</span>
-          <div class="photo-placeholder aspect-[4/3] w-full rounded-2xl shadow-card flex items-center justify-center overflow-hidden border border-crimson/20">
-            <span class="text-crimson/40 text-sm font-medium tracking-wide">Photo Placeholder</span>
-          </div>
-          <p class="mt-5 font-serif text-2xl sm:text-3xl text-wine italic">Us, right now</p>
-          <p class="text-wine/75 text-base sm:text-lg mt-2">And every tomorrow after</p>
-        </article>
       </div>
     </section>
 
@@ -1307,7 +1297,7 @@
 
       /* ─── Photo puzzle ─── */
       // Drop your photo in the same folder as index.html named puzzle-photo.jpg
-      const PUZZLE_IMAGE = 'puzzle-photo.jpg';
+      const PUZZLE_IMAGE = document.body.getAttribute('data-puzzle-image') || 'puzzle-photo.jpg';
       const PUZZLE_FALLBACK = 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=600&q=80';
       let puzzleImageSrc = PUZZLE_IMAGE;
 
