@@ -6,7 +6,7 @@ const fs = require('fs');
 const multer = require('multer');
 const store = require('./lib/store');
 const { generateSiteId } = require('./lib/generateId');
-const { createPaymentRequest, handleWebhook, extractDraftIdFromOrder, isPaymentConfigured, deleteShopierProduct, listCheckoutListingProducts, deleteAllCheckoutListingProducts } = require('./lib/shopier');
+const { createPaymentRequest, handleWebhook, extractDraftIdFromOrder, isPaymentConfigured, deleteShopierProduct, listCheckoutListingProducts, deleteAllCheckoutListingProducts, testShopierConnection } = require('./lib/shopier');
 const { generateQrForSite, buildWhatsAppShareUrl } = require('./lib/qr');
 const { renderSurprisePage } = require('./lib/renderSurprise');
 const { getAppMode, getPublicConfig } = require('./lib/mode');
@@ -139,6 +139,14 @@ async function fulfillPayment(draftId, shopierPaymentId) {
  */
 app.get('/api/config', (_req, res) => {
   res.json(getPublicConfig());
+});
+
+/**
+ * GET /api/shopier/status — verify PAT can reach Shopier API.
+ */
+app.get('/api/shopier/status', async (_req, res) => {
+  const result = await testShopierConnection();
+  return res.status(result.ok ? 200 : 503).json(result);
 });
 
 /**
@@ -325,6 +333,8 @@ app.post('/api/pay', async (req, res) => {
       if (/invalid media url|media\[0\]\.url/i.test(err.message)) {
         message =
           'Product image URL is invalid for Shopier. Remove SHOPIER_PRODUCT_IMAGE_URL or use a URL ending in .jpg or .png. Default: BASE_URL/product-cover.jpg';
+      } else if (/currency|EUR|TRY|USD/i.test(err.message)) {
+        message = `${err.message} If your Shopier shop only supports TRY, set PRODUCT_CURRENCY=TRY on Render.`;
       } else if (err.message.includes('401') || err.message.includes('Unauthorized') || err.message.includes('PAT')) {
         message = 'Invalid Shopier PAT. Set SHOPIER_PAT to your Personal Access Token (not Client ID).';
       } else if (err.message.includes('shopSlug') || err.message.includes('shop')) {
