@@ -576,11 +576,13 @@
             <span class="text-[0.65rem] sm:text-xs text-wine/60 font-medium whitespace-nowrap">Core Details</span>
           </div>
           <div id="connector-1" class="step-connector mt-[-1.25rem]"></div>
-          <div class="flex flex-col items-center gap-1.5">
-            <div id="step-dot-2" class="step-dot pending">2</div>
-            <span class="text-[0.65rem] sm:text-xs text-wine/60 font-medium whitespace-nowrap">Photos</span>
+          <div id="progress-step-2" class="flex items-center gap-0">
+            <div class="flex flex-col items-center gap-1.5">
+              <div id="step-dot-2" class="step-dot pending">2</div>
+              <span class="text-[0.65rem] sm:text-xs text-wine/60 font-medium whitespace-nowrap">Photos</span>
+            </div>
+            <div id="connector-2" class="step-connector mt-[-1.25rem]"></div>
           </div>
-          <div id="connector-2" class="step-connector mt-[-1.25rem]"></div>
           <div class="flex flex-col items-center gap-1.5">
             <div id="step-dot-3" class="step-dot pending">3</div>
             <span class="text-[0.65rem] sm:text-xs text-wine/60 font-medium whitespace-nowrap">Finalize</span>
@@ -714,6 +716,13 @@
                   <label class="form-label" for="buyer-email">Your Email <span class="text-wine/40 font-normal">(for payment receipt)</span></label>
                   <input type="email" id="buyer-email" class="form-input" placeholder="you@example.com" autocomplete="email" />
                 </div>
+                <div id="preview-key-wrap" class="hidden">
+                  <label class="form-label" for="preview-key">Preview key</label>
+                  <input type="password" id="preview-key" class="form-input" placeholder="Only if you set PREVIEW_SECRET on Render" autocomplete="off" />
+                  <p id="preview-key-hint" class="text-xs text-wine/50 mt-1.5">
+                    Test mode is on. Leave empty unless you added <code class="text-crimson/80">PREVIEW_SECRET</code> in Render Environment.
+                  </p>
+                </div>
               </div>
 
               <!-- Shopier connection status -->
@@ -765,6 +774,9 @@
                 </button>
                 <button type="button" id="checkout-btn" class="btn-primary btn-checkout flex-1">
                   Create My Surprise &amp; Pay
+                </button>
+                <button type="button" id="preview-qr-btn" class="hidden btn-secondary flex-1 text-sm">
+                  Preview QR (no payment)
                 </button>
               </div>
             </div>
@@ -885,6 +897,7 @@
         whyLoveYou: '',
         music: 'romantic-piano',
         buyerEmail: '',
+        previewKey: '',
         mobileShowingPreview: false,
       };
 
@@ -913,6 +926,12 @@
         musicSelect: document.getElementById('music-select'),
         buyerEmail: document.getElementById('buyer-email'),
         checkoutBtn: document.getElementById('checkout-btn'),
+        previewQrBtn: document.getElementById('preview-qr-btn'),
+        previewKeyWrap: document.getElementById('preview-key-wrap'),
+        previewKeyHint: document.getElementById('preview-key-hint'),
+        previewKey: document.getElementById('preview-key'),
+        wizardStep2: document.getElementById('wizard-step-2'),
+        progressStep2: document.getElementById('progress-step-2'),
         checkoutOverlay: document.getElementById('checkout-overlay'),
         mobileToggle: document.getElementById('mobile-preview-toggle'),
         previewPartnerName: document.getElementById('preview-partner-name'),
@@ -949,6 +968,23 @@
         }
         if (config.shopSlug) {
           appConfig.shopSlug = config.shopSlug;
+        }
+        if (els.previewQrBtn) {
+          els.previewQrBtn.classList.toggle('hidden', !config.allowDevQr);
+        }
+        if (els.previewKeyWrap) {
+          els.previewKeyWrap.classList.toggle('hidden', !config.allowDevQr);
+        }
+        if (els.previewKeyHint && config.allowDevQr) {
+          els.previewKeyHint.textContent = config.previewKeyRequired
+            ? 'Enter the same value you set as PREVIEW_SECRET in Render Environment.'
+            : 'Test mode is on — no preview key needed. Optional: set PREVIEW_SECRET on Render for extra protection.';
+        }
+        if (els.wizardStep2) {
+          els.wizardStep2.classList.toggle('hidden', !!config.allowDevQr);
+        }
+        if (els.progressStep2) {
+          els.progressStep2.classList.toggle('hidden', !!config.allowDevQr);
         }
 
         if (config.shopierConfigured) {
@@ -1040,6 +1076,10 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
 
+      function isDevQrMode() {
+        return !!(appConfig && appConfig.allowDevQr);
+      }
+
       function validateStep(step) {
         if (step === 1) {
           if (!state.userName.trim()) {
@@ -1058,7 +1098,7 @@
             return false;
           }
         }
-        if (step === 2) {
+        if (step === 2 && !isDevQrMode()) {
           for (let i = 0; i < 5; i += 1) {
             if (!state.photoFiles[i]) {
               const zone = document.querySelector('[data-upload-index="' + i + '"]');
@@ -1073,13 +1113,21 @@
       document.querySelectorAll('[data-action="next"]').forEach(function (btn) {
         btn.addEventListener('click', function () {
           if (!validateStep(state.currentStep)) return;
-          if (state.currentStep < 3) showStep(state.currentStep + 1);
+          if (state.currentStep < 3) {
+            var nextStep = state.currentStep + 1;
+            if (isDevQrMode() && nextStep === 2) nextStep = 3;
+            showStep(nextStep);
+          }
         });
       });
 
       document.querySelectorAll('[data-action="prev"]').forEach(function (btn) {
         btn.addEventListener('click', function () {
-          if (state.currentStep > 1) showStep(state.currentStep - 1);
+          if (state.currentStep > 1) {
+            var prevStep = state.currentStep - 1;
+            if (isDevQrMode() && prevStep === 2) prevStep = 1;
+            showStep(prevStep);
+          }
         });
       });
 
@@ -1310,12 +1358,65 @@
         }
       }
 
+      async function createDraftForCheckout() {
+        const draftRes = await fetch(API_BASE + '/api/create-draft', {
+          method: 'POST',
+          body: buildDraftFormData(),
+        });
+        const draftData = await parseJsonResponse(draftRes);
+        if (!draftRes.ok) {
+          throw new Error(draftData.error || 'Could not save draft');
+        }
+        return draftData;
+      }
+
+      if (els.previewKey) {
+        bindInput(els.previewKey, 'previewKey');
+      }
+
+      if (els.previewQrBtn) {
+        els.previewQrBtn.addEventListener('click', async function () {
+          if (!validateStep(1)) {
+            showStep(1);
+            return;
+          }
+
+          els.previewQrBtn.disabled = true;
+          els.checkoutOverlay.classList.add('visible');
+          setCheckoutOverlayMessage('Creating preview…', 'Generating QR without payment');
+
+          try {
+            const draftData = await createDraftForCheckout();
+            const previewRes = await fetch(API_BASE + '/api/payment/preview-qr', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                draftId: draftData.draftId,
+                previewKey: state.previewKey.trim() || undefined,
+              }),
+            });
+            const previewData = await parseJsonResponse(previewRes);
+            if (!previewRes.ok) {
+              throw new Error(previewData.error || 'Preview failed');
+            }
+            window.location.href = previewData.successUrl;
+          } catch (err) {
+            console.error('[Preview QR]', err);
+            setCheckoutOverlayMessage('Preview failed', err.message || 'Try again');
+            setTimeout(function () {
+              els.checkoutOverlay.classList.remove('visible');
+              els.previewQrBtn.disabled = false;
+            }, 2800);
+          }
+        });
+      }
+
       els.checkoutBtn.addEventListener('click', async function () {
         if (!validateStep(1)) {
           showStep(1);
           return;
         }
-        if (!validateStep(2)) {
+        if (!isDevQrMode() && !validateStep(2)) {
           showStep(2);
           return;
         }
@@ -1325,14 +1426,7 @@
         els.checkoutBtn.disabled = true;
 
         try {
-          const draftRes = await fetch(API_BASE + '/api/create-draft', {
-            method: 'POST',
-            body: buildDraftFormData(),
-          });
-          const draftData = await parseJsonResponse(draftRes);
-          if (!draftRes.ok) {
-            throw new Error(draftData.error || 'Could not save draft');
-          }
+          const draftData = await createDraftForCheckout();
 
           setCheckoutOverlayMessage(
             'Redirecting to secure checkout…',

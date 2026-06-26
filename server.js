@@ -12,7 +12,7 @@ const { getCheckoutPaymentTemplate } = require('./lib/mode');
 const { createShopierPaymentRouter, createShopierWebhookHandler } = require('./routes/shopierPayment');
 const { generateQrForSite, buildWhatsAppShareUrl } = require('./lib/qr');
 const { renderSurprisePage } = require('./lib/renderSurprise');
-const { getAppMode, getPublicConfig } = require('./lib/mode');
+const { getAppMode, getPublicConfig, isDevQrAllowed } = require('./lib/mode');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -317,18 +317,59 @@ app.post('/api/pay', async (req, res) => {
 });
 
 /**
- * Dev-only: simulate successful payment without Shopier (paid mode local testing).
+ * Preview QR without Shopier payment (local dev or ALLOW_DEV_QR on Render).
+ */
+async function handlePreviewQr(req, res) {
+  if (!isDevQrAllowed()) {
+    return res.status(404).json({ error: 'Preview QR is not enabled.' });
+  }
+
+  const previewSecret = (process.env.PREVIEW_SECRET || '').trim();
+  if (previewSecret) {
+    const provided =
+      req.query.key ||
+      req.body?.previewKey ||
+      req.get('x-preview-key');
+    if (provided !== previewSecret) {
+      return res.status(403).json({
+        error: 'Invalid preview key. Enter the same value as PREVIEW_SECRET on Render.',
+      });
+    }
+  }
+
+  const draftId = req.params.draftId || req.body?.draftId;
+  if (!draftId) {
+    return res.status(400).json({ error: 'draftId is required.' });
+  }
+
+  const draft = await store.findById(draftId);
+  if (!draft) {
+    return res.status(404).json({ error: 'Draft not found.' });
+  }
+
+  try {
+    await fulfillPayment(draftId, `preview-${Date.now()}`);
+    const successUrl = `${BASE_URL}/success/${draftId}`;
+    if (req.method === 'GET') {
+      return res.redirect(successUrl);
+    }
+    return res.json({ ok: true, successUrl, draftId });
+  } catch (err) {
+    console.error('[preview-qr]', err);
+    return res.status(500).json({ error: 'Could not generate preview QR.' });
+  }
+}
+
+app.get('/api/payment/preview-qr/:draftId', handlePreviewQr);
+app.post('/api/payment/preview-qr', handlePreviewQr);
+
+/**
+ * Dev-only alias — simulate successful payment without Shopier.
  */
 if (process.env.NODE_ENV !== 'production') {
   app.get('/api/payment/dev-confirm/:draftId', async (req, res) => {
-    try {
-      const site = await fulfillPayment(req.params.draftId, `dev-${Date.now()}`);
-      if (!site) return res.status(404).send('Draft not found');
-      return res.redirect(`${BASE_URL}/success/${req.params.draftId}`);
-    } catch (err) {
-      console.error('[dev-confirm]', err);
-      return res.status(500).send('Dev confirm failed');
-    }
+    req.params.draftId = req.params.draftId;
+    return handlePreviewQr(req, res);
   });
 }
 
