@@ -312,12 +312,6 @@ app.post('/api/pay', async (req, res) => {
       deleteShopierProduct(draft.shopierProductId).catch(() => {});
     }
 
-    try {
-      await deleteAllCheckoutListingProducts();
-    } catch (cleanupErr) {
-      console.warn('[pay] pre-checkout cleanup failed', cleanupErr.message);
-    }
-
     const payment = await createPaymentRequest({ draftId });
 
     await store.updateById(draftId, {
