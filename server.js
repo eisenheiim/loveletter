@@ -312,6 +312,12 @@ app.post('/api/pay', async (req, res) => {
       deleteShopierProduct(draft.shopierProductId).catch(() => {});
     }
 
+    try {
+      await deleteAllCheckoutListingProducts();
+    } catch (cleanupErr) {
+      console.warn('[pay] pre-checkout cleanup failed', cleanupErr.message);
+    }
+
     const payment = await createPaymentRequest({ draftId });
 
     await store.updateById(draftId, {
@@ -324,6 +330,7 @@ app.post('/api/pay', async (req, res) => {
       successUrl: `${BASE_URL}/success/${draftId}`,
       checkoutUrl: payment.checkoutUrl,
       checkoutHtml: payment.checkoutHtml,
+      paymentTotal: '€1.00',
     });
   } catch (err) {
     console.error('[pay]', err);
@@ -334,7 +341,8 @@ app.post('/api/pay', async (req, res) => {
         message =
           'Product image URL is invalid for Shopier. Remove SHOPIER_PRODUCT_IMAGE_URL or use a URL ending in .jpg or .png. Default: BASE_URL/product-cover.jpg';
       } else if (/currency|EUR|TRY|USD/i.test(err.message)) {
-        message = `${err.message} If your Shopier shop only supports TRY, set PRODUCT_CURRENCY=TRY on Render.`;
+        message =
+          'Shopier currency error on the server. Keep PRODUCT_CURRENCY=TRY on Render; customers always see €1.00 on this site.';
       } else if (err.message.includes('401') || err.message.includes('Unauthorized') || err.message.includes('PAT')) {
         message = 'Invalid Shopier PAT. Set SHOPIER_PAT to your Personal Access Token (not Client ID).';
       } else if (err.message.includes('shopSlug') || err.message.includes('shop')) {

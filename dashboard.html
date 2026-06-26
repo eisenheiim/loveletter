@@ -547,7 +547,7 @@
     <div class="text-center px-8">
       <div class="spinner mx-auto mb-5"></div>
       <p id="checkout-overlay-title" class="font-serif text-2xl text-cream mb-2">Redirecting to secure checkout&hellip;</p>
-      <p id="checkout-overlay-subtitle" class="text-soft-pink/80 text-sm">Preparing your surprise</p>
+      <p id="checkout-overlay-subtitle" class="text-soft-pink/80 text-sm">Payment total: €1.00</p>
     </div>
   </div>
 
@@ -719,19 +719,6 @@
               <!-- Shopier connection status -->
               <div id="shopier-status-wrap" class="hidden mb-4 p-3 rounded-xl border text-sm"></div>
 
-              <!-- Shopier leftover products -->
-              <div id="shopier-cleanup-wrap" class="hidden mb-6 p-4 rounded-xl border border-crimson/15 bg-blush/30">
-                <div class="flex items-start justify-between gap-3 mb-3">
-                  <div>
-                    <h4 class="text-wine font-medium text-sm">Shopier checkout products</h4>
-                    <p class="text-wine/55 text-xs mt-1">Remove leftover products from previous test checkouts so they do not appear in payment.</p>
-                  </div>
-                  <button type="button" id="shopier-delete-all" class="text-xs text-crimson underline whitespace-nowrap">Delete all</button>
-                </div>
-                <div id="shopier-product-list" class="space-y-2"></div>
-                <p id="shopier-cleanup-status" class="text-xs text-wine/50 mt-2 hidden"></p>
-              </div>
-
               <!-- Purchase summary -->
               <div class="summary-card mb-8">
                 <h3 id="package-title" class="font-serif text-xl text-wine mb-4">Your Package</h3>
@@ -767,6 +754,22 @@
                 <div class="mt-4 pt-4 border-t border-crimson/10 flex items-baseline justify-between">
                   <span class="text-wine/60 text-sm">Total</span>
                   <span id="price-label" class="font-serif text-2xl text-crimson">—</span>
+                </div>
+                <p id="price-note" class="hidden text-xs text-wine/50 mt-2 text-right"></p>
+
+                <div id="shopier-summary-products" class="hidden mt-4 pt-4 border-t border-crimson/10">
+                  <div class="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <p class="text-wine font-medium text-sm">Shopier checkout products</p>
+                      <p class="text-wine/50 text-xs">Remove old test products so they do not appear at payment.</p>
+                    </div>
+                    <button type="button" id="shopier-delete-all" class="text-xs font-medium text-crimson border border-crimson/25 rounded-full px-3 py-1 hover:bg-crimson/5">
+                      Delete all
+                    </button>
+                  </div>
+                  <div id="shopier-product-list" class="space-y-2"></div>
+                  <p id="shopier-empty-note" class="hidden text-xs text-wine/45 mt-2">No leftover products.</p>
+                  <p id="shopier-cleanup-status" class="text-xs text-wine/50 mt-2 hidden"></p>
                 </div>
               </div>
 
@@ -882,8 +885,10 @@
         mode: 'paid',
         shopierConfigured: false,
         priceDisplay: '€1.00',
-        checkoutButton: 'Create My Surprise & Pay',
+        checkoutButton: 'Pay €1.00 & Create Surprise',
         packageTitle: 'Premium Package',
+        paymentTotal: '€1.00',
+        priceNote: 'Payment total: €1.00',
       };
       const state = {
         currentStep: 1,
@@ -936,10 +941,12 @@
         modeBadge: document.getElementById('mode-badge'),
         packageTitle: document.getElementById('package-title'),
         priceLabel: document.getElementById('price-label'),
+        priceNote: document.getElementById('price-note'),
         premiumHostingItem: document.getElementById('premium-hosting-item'),
         buyerEmailWrap: document.getElementById('buyer-email-wrap'),
-        shopierCleanupWrap: document.getElementById('shopier-cleanup-wrap'),
+        shopierSummaryProducts: document.getElementById('shopier-summary-products'),
         shopierProductList: document.getElementById('shopier-product-list'),
+        shopierEmptyNote: document.getElementById('shopier-empty-note'),
         shopierDeleteAll: document.getElementById('shopier-delete-all'),
         shopierCleanupStatus: document.getElementById('shopier-cleanup-status'),
         shopierStatusWrap: document.getElementById('shopier-status-wrap'),
@@ -952,14 +959,27 @@
           els.modeBadge.textContent = 'Premium';
         }
         if (els.packageTitle) els.packageTitle.textContent = config.packageTitle;
-        if (els.priceLabel) els.priceLabel.textContent = config.priceDisplay;
+        if (els.priceLabel) els.priceLabel.textContent = config.priceDisplay || '€1.00';
+        if (els.priceNote) {
+          els.priceNote.textContent = config.priceNote || 'Payment total: €1.00';
+          els.priceNote.classList.remove('hidden');
+        }
         if (els.checkoutBtn) {
-          els.checkoutBtn.textContent = config.checkoutButton;
+          els.checkoutBtn.textContent = config.checkoutButton || 'Pay €1.00 & Create Surprise';
         }
 
         if (config.shopierConfigured) {
+          showShopierSummarySection();
           loadShopierListingProducts();
           loadShopierConnectionStatus();
+        } else if (els.shopierSummaryProducts) {
+          els.shopierSummaryProducts.classList.add('hidden');
+        }
+      }
+
+      function showShopierSummarySection() {
+        if (els.shopierSummaryProducts) {
+          els.shopierSummaryProducts.classList.remove('hidden');
         }
       }
 
@@ -1006,32 +1026,43 @@
       }
 
       function renderShopierProductList(products) {
-        if (!els.shopierProductList || !els.shopierCleanupWrap) return;
+        if (!els.shopierProductList) return;
 
+        showShopierSummarySection();
         els.shopierProductList.innerHTML = '';
-        if (!products.length) {
-          els.shopierCleanupWrap.classList.add('hidden');
-          return;
+
+        if (els.shopierEmptyNote) {
+          els.shopierEmptyNote.classList.toggle('hidden', products.length > 0);
+        }
+        if (els.shopierDeleteAll) {
+          els.shopierDeleteAll.classList.toggle('hidden', products.length === 0);
         }
 
-        els.shopierCleanupWrap.classList.remove('hidden');
         products.forEach(function (product) {
           const row = document.createElement('div');
-          row.className = 'flex items-center justify-between gap-3 p-2 rounded-lg bg-white/70 border border-crimson/10';
+          row.className = 'flex items-center justify-between gap-3 p-2.5 rounded-lg bg-blush/40 border border-crimson/10';
           row.innerHTML =
-            '<div class="min-w-0 text-left">' +
-              '<p class="text-wine text-xs font-medium truncate">' + (product.title || 'Untitled product') + '</p>' +
-              '<p class="text-wine/45 text-[0.65rem] truncate">ID: ' + product.id + '</p>' +
+            '<div class="min-w-0 text-left flex-1">' +
+              '<p class="text-wine text-xs font-medium truncate">' + escapeHtml(product.title || 'Untitled product') + '</p>' +
+              '<p class="text-wine/45 text-[0.65rem] truncate">ID: ' + escapeHtml(String(product.id)) + '</p>' +
             '</div>' +
-            '<button type="button" class="shopier-delete-one text-xs text-crimson underline whitespace-nowrap" data-product-id="' + product.id + '">Delete</button>';
+            '<button type="button" class="shopier-delete-one shrink-0 text-xs font-medium text-white bg-crimson/90 hover:bg-crimson rounded-full px-3 py-1.5" data-product-id="' + escapeHtml(String(product.id)) + '">Delete</button>';
           els.shopierProductList.appendChild(row);
         });
 
         els.shopierProductList.querySelectorAll('.shopier-delete-one').forEach(function (btn) {
           btn.addEventListener('click', function () {
-            deleteShopierListingProduct(btn.getAttribute('data-product-id'));
+            deleteShopierListingProduct(btn.getAttribute('data-product-id'), btn);
           });
         });
+      }
+
+      function escapeHtml(text) {
+        return String(text)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
       }
 
       async function loadShopierListingProducts() {
@@ -1045,8 +1076,12 @@
         }
       }
 
-      async function deleteShopierListingProduct(productId) {
+      async function deleteShopierListingProduct(productId, buttonEl) {
         if (!productId) return;
+        if (buttonEl) {
+          buttonEl.disabled = true;
+          buttonEl.textContent = 'Deleting…';
+        }
         try {
           const res = await fetch(API_BASE + '/api/shopier/listing-products/' + encodeURIComponent(productId), {
             method: 'DELETE',
@@ -1056,6 +1091,10 @@
           await loadShopierListingProducts();
         } catch (err) {
           setShopierCleanupStatus('Could not delete product.', true);
+          if (buttonEl) {
+            buttonEl.disabled = false;
+            buttonEl.textContent = 'Delete';
+          }
         }
       }
 
@@ -1119,6 +1158,7 @@
         });
         updateProgressUI();
         if (step === 3 && appConfig.shopierConfigured) {
+          showShopierSummarySection();
           loadShopierListingProducts();
           loadShopierConnectionStatus();
         }
@@ -1394,7 +1434,7 @@
         }
 
         els.checkoutOverlay.classList.add('visible');
-        setCheckoutOverlayMessage('Saving your surprise…', 'Uploading photos and details');
+        setCheckoutOverlayMessage('Saving your surprise…', 'Payment total: €1.00');
         els.checkoutBtn.disabled = true;
 
         try {
@@ -1409,7 +1449,7 @@
 
           setCheckoutOverlayMessage(
             'Redirecting to secure checkout…',
-            'Connecting to Shopier'
+            'Payment total: €1.00'
           );
 
           const payRes = await fetch(API_BASE + '/api/pay', {
@@ -1460,7 +1500,7 @@
           setCheckoutOverlayMessage('Something went wrong', err.message || 'Please try again');
           setTimeout(function () {
             els.checkoutOverlay.classList.remove('visible');
-            setCheckoutOverlayMessage('Redirecting to secure checkout…', 'Preparing your surprise');
+            setCheckoutOverlayMessage('Redirecting to secure checkout…', 'Payment total: €1.00');
             els.checkoutBtn.disabled = false;
           }, 2800);
         }
