@@ -21,6 +21,7 @@ const surpriseSiteSchema = new mongoose.Schema(
     shopierPaymentId: { type: String, default: null },
     buyerEmail: { type: String, default: null },
     buyerPhone: { type: String, default: null },
+    checkoutStartedAt: { type: Date, default: null },
   },
   {
     timestamps: { createdAt: true, updatedAt: true },

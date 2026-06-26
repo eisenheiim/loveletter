@@ -6,7 +6,7 @@ const fs = require('fs');
 const multer = require('multer');
 const store = require('./lib/store');
 const { generateSiteId } = require('./lib/generateId');
-const { createPaymentRequest, handleWebhook, extractDraftIdFromOrder, isPaymentConfigured, deleteShopierProduct, testShopierConnection } = require('./lib/shopier');
+const { createPaymentRequest, handleWebhook, resolveDraftFromPayment, isPaymentConfigured, ensureSharedProduct, testShopierConnection } = require('./lib/shopier');
 const { generateQrForSite, buildWhatsAppShareUrl } = require('./lib/qr');
 const { renderSurprisePage } = require('./lib/renderSurprise');
 const { getAppMode, getPublicConfig } = require('./lib/mode');
@@ -36,20 +36,15 @@ app.post(
   async (req, res) => {
     try {
       const result = await handleWebhook(req.body, req.headers, async (info) => {
-        const { order, productId } = info;
-        let draftId = extractDraftIdFromOrder(order, productId);
+        const { order } = info;
+        const draftId = await resolveDraftFromPayment(order, store);
 
         if (!draftId) {
-          const byProduct = await store.findByShopierProductId(productId);
-          if (byProduct) draftId = byProduct.id;
-        }
-
-        if (!draftId) {
-          console.warn('[payment/webhook] Could not resolve draft for product', productId);
+          console.warn('[payment/webhook] Could not resolve draft for order', order?.id);
           return;
         }
 
-        await fulfillPayment(draftId, order.id || productId);
+        await fulfillPayment(draftId, order.id);
         console.log('[payment/webhook] Fulfilled draft', draftId);
       });
 
@@ -120,12 +115,6 @@ async function fulfillPayment(draftId, shopierPaymentId) {
 
   const { relativePath } = await generateQrForSite(draftId, BASE_URL);
   const updated = await store.updateById(draftId, { qrCodePath: relativePath });
-
-  if (site.shopierProductId) {
-    deleteShopierProduct(site.shopierProductId).catch((err) => {
-      console.warn('[shopier] post-payment product cleanup failed', site.shopierProductId, err.message);
-    });
-  }
 
   return updated;
 }
@@ -254,15 +243,11 @@ app.post('/api/pay', async (req, res) => {
       });
     }
 
-    if (draft.shopierProductId) {
-      deleteShopierProduct(draft.shopierProductId).catch(() => {});
-    }
+    await store.updateById(draftId, {
+      checkoutStartedAt: new Date().toISOString(),
+    });
 
     const payment = await createPaymentRequest({ draftId });
-
-    await store.updateById(draftId, {
-      shopierProductId: payment.productId,
-    });
 
     return res.json({
       mode: 'paid',
@@ -280,6 +265,8 @@ app.post('/api/pay', async (req, res) => {
       if (/invalid media url|media\[0\]\.url/i.test(err.message)) {
         message =
           'Product image URL is invalid for Shopier. Remove SHOPIER_PRODUCT_IMAGE_URL or use a URL ending in .jpg or .png. Default: BASE_URL/product-cover.jpg';
+      } else if (/SHOPIER_PRODUCT_ID/i.test(err.message)) {
+        message = err.message;
       } else if (/denied|403|forbidden/i.test(err.message)) {
         message = 'Shopier access denied. Check SHOPIER_PAT permissions (products:read, products:write) and SHOPIER_SHOP_SLUG.';
       } else if (/currency|EUR|TRY|USD/i.test(err.message)) {
@@ -417,6 +404,18 @@ app.use((err, _req, res, _next) => {
 /* ─── Boot ─── */
 async function start() {
   await store.connect();
+
+  if (isPaymentConfigured()) {
+    const productId = (process.env.SHOPIER_PRODUCT_ID || '').trim();
+    if (productId) {
+      console.log(`[shopier] Shared checkout product: ${productId}`);
+    } else if (process.env.NODE_ENV === 'production') {
+      console.warn(
+        '[shopier] Set SHOPIER_PRODUCT_ID on Render to reuse one Shopier product for all orders.'
+      );
+    }
+  }
+
   app.listen(PORT, () => {
     const config = getPublicConfig();
     console.log(`\n  Valentine Surprise server running`);
