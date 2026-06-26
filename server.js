@@ -280,7 +280,7 @@ app.post('/api/pay', async (req, res) => {
     if (err.message) {
       if (/invalid media url|media\[0\]\.url/i.test(err.message)) {
         message =
-          'Ürün görseli URL\'si Shopier formatına uymuyor. SHOPIER_PRODUCT_IMAGE_URL .jpg veya .png ile bitmeli (ör. https://site.com/image.jpg).';
+          'Ürün görseli URL\'si Shopier formatına uymuyor. Render\'da SHOPIER_PRODUCT_IMAGE_URL değişkenini silin veya .jpg/.png ile biten bir adres yazın (ör. https://site.com/image.jpg). Varsayılan: BASE_URL/product-cover.jpg';
       } else if (err.message.includes('401') || err.message.includes('Unauthorized') || err.message.includes('PAT')) {
         message = 'Shopier PAT geçersiz. SHOPIER_PAT alanına Kişisel Erişim Anahtarını yazın (Client ID değil).';
       } else if (err.message.includes('shopSlug') || err.message.includes('shop')) {
