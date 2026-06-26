@@ -1203,6 +1203,15 @@
         if (subtitle) subtitle.textContent = sub || '';
       }
 
+      async function parseJsonResponse(res) {
+        const text = await res.text();
+        try {
+          return JSON.parse(text);
+        } catch {
+          throw new Error(res.status === 404 ? 'Sunucu API bulunamadı. Site backend ile mi çalışıyor?' : (text.slice(0, 120) || 'Sunucu hatası'));
+        }
+      }
+
       els.checkoutBtn.addEventListener('click', async function () {
         if (!validateStep(1)) {
           showStep(1);
@@ -1218,9 +1227,9 @@
             method: 'POST',
             body: buildDraftFormData(),
           });
-          const draftData = await draftRes.json();
+          const draftData = await parseJsonResponse(draftRes);
           if (!draftRes.ok) {
-            throw new Error(draftData.error || 'Failed to save draft');
+            throw new Error(draftData.error || 'Taslak kaydedilemedi');
           }
 
           setCheckoutOverlayMessage(
@@ -1236,9 +1245,11 @@
               buyerEmail: state.buyerEmail.trim() || undefined,
             }),
           });
-          const payData = await payRes.json();
+          const payData = await parseJsonResponse(payRes);
           if (!payRes.ok) {
-            throw new Error(payData.error || 'Failed to start payment');
+            var payErr = payData.error || 'Ödeme başlatılamadı';
+            if (payData.hint) payErr += ' — ' + payData.hint;
+            throw new Error(payErr);
           }
 
           console.log('[Valentine Surprise — Draft Created]', draftData);
@@ -1271,7 +1282,7 @@
           throw new Error('No checkout URL returned from server');
         } catch (err) {
           console.error('[Valentine Surprise — Checkout Error]', err);
-          setCheckoutOverlayMessage('Something went wrong', err.message || 'Please try again');
+          setCheckoutOverlayMessage('Bir şeyler ters gitti', err.message || 'Lütfen tekrar deneyin');
           setTimeout(function () {
             els.checkoutOverlay.classList.remove('visible');
             setCheckoutOverlayMessage('Redirecting to secure checkout…', 'Preparing your surprise');

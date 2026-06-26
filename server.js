@@ -6,7 +6,7 @@ const fs = require('fs');
 const multer = require('multer');
 const store = require('./lib/store');
 const { generateSiteId } = require('./lib/generateId');
-const { createPaymentRequest, handleWebhook, extractDraftIdFromOrder, isConfigured } = require('./lib/shopier');
+const { createPaymentRequest, handleWebhook, extractDraftIdFromOrder, isPaymentConfigured } = require('./lib/shopier');
 const { generateQrForSite } = require('./lib/qr');
 const { renderSurprisePage } = require('./lib/renderSurprise');
 const { getAppMode, isFreeMode, isPaidMode, getPublicConfig } = require('./lib/mode');
@@ -249,13 +249,14 @@ app.post('/api/pay', async (req, res) => {
       });
     }
 
-    /* ─── PAID MODE: Shopier required ─── */
-    if (!isConfigured()) {
+    /* ─── PAID MODE: Shopier checkout ─── */
+    if (!isPaymentConfigured()) {
       return res.status(503).json({
         error:
-          'Shopier yapılandırılmadı. SHOPIER_PAT, SHOPIER_SHOP_SLUG ve SHOPIER_API_SECRET (veya SHOPIER_WEBHOOK_TOKEN) ekleyin veya APP_MODE=free kullanın.',
+          'Shopier ödeme ayarları eksik. Render\'da SHOPIER_PAT ve SHOPIER_SHOP_SLUG kontrol edin. (Client Secret ödeme başlatmak için gerekmez.)',
         mode: 'paid',
         shopierConfigured: false,
+        hint: 'PAT = Kişisel Erişim Anahtarı (Client ID değil)',
       });
     }
 
@@ -274,7 +275,26 @@ app.post('/api/pay', async (req, res) => {
     });
   } catch (err) {
     console.error('[pay]', err);
-    return res.status(500).json({ error: 'Failed to initialize payment.' });
+
+    let message = 'Ödeme başlatılamadı. Shopier ayarlarını kontrol edin.';
+    if (err.message) {
+      if (/invalid media url|media\[0\]\.url/i.test(err.message)) {
+        message =
+          'Ürün görseli URL\'si Shopier formatına uymuyor. SHOPIER_PRODUCT_IMAGE_URL .jpg veya .png ile bitmeli (ör. https://site.com/image.jpg).';
+      } else if (err.message.includes('401') || err.message.includes('Unauthorized') || err.message.includes('PAT')) {
+        message = 'Shopier PAT geçersiz. SHOPIER_PAT alanına Kişisel Erişim Anahtarını yazın (Client ID değil).';
+      } else if (err.message.includes('shopSlug') || err.message.includes('shop')) {
+        message = 'Mağaza slug hatalı. SHOPIER_SHOP_SLUG değerini kontrol edin.';
+      } else {
+        message = err.message;
+      }
+    }
+
+    if (typeof err.toSafeJSON === 'function') {
+      console.error('[pay] details', err.toSafeJSON());
+    }
+
+    return res.status(500).json({ error: message });
   }
 });
 
@@ -395,7 +415,7 @@ async function start() {
     console.log(`  Local:   ${BASE_URL}`);
     console.log(`  Storage: ${store.mode}`);
     console.log(`  Mode:    ${config.mode} (${config.priceDisplay})`);
-    console.log(`  Shopier: ${config.shopierConfigured ? 'configured' : 'not configured'}\n`);
+    console.log(`  Shopier: ${isPaymentConfigured() ? 'payment ready' : 'payment not configured'}\n`);
   });
 }
 
