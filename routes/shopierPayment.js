@@ -1,13 +1,9 @@
 'use strict';
 
 const express = require('express');
-const {
-  isShopierConfigured,
-  isWebhookConfigured,
-  initializePayment,
-  buildPayloadFromDraft,
-  ShopierApiError,
-} = require('../lib/shopier-rest');
+const { isPaymentConfigured } = require('../lib/shopier');
+const { isWebhookConfigured } = require('../lib/shopier-rest');
+const { createPaymentRequest } = require('../lib/shopier');
 const {
   verifyWebhookSignature,
   isSuccessfulPaymentEvent,
@@ -16,7 +12,7 @@ const {
 /**
  * Shopier PAT payment routes.
  *
- * POST /api/payment/initialize — start checkout via REST payment/trigger
+ * POST /api/payment/initialize — open checkout for the shared Shopier product
  * POST /api/payment/webhook     — verify HMAC + process payment events
  */
 function createShopierPaymentRouter({ store, fulfillPayment, resolveDraftFromPayment }) {
@@ -24,17 +20,21 @@ function createShopierPaymentRouter({ store, fulfillPayment, resolveDraftFromPay
 
   router.post('/initialize', async (req, res) => {
     try {
-      if (!isShopierConfigured()) {
+      if (!isPaymentConfigured()) {
         return res.status(503).json({
           error: 'Shopier is not configured. Set SHOPIER_PAT on the server.',
         });
       }
 
       const body = req.body || {};
-      let checkoutInput = { ...body };
+      const draftId = body.draftId;
 
-      if (body.draftId && store?.findById) {
-        const draft = await store.findById(body.draftId);
+      if (!draftId) {
+        return res.status(400).json({ error: 'draftId is required.' });
+      }
+
+      if (store?.findById) {
+        const draft = await store.findById(draftId);
         if (!draft) {
           return res.status(404).json({ error: 'Draft not found.' });
         }
@@ -54,15 +54,21 @@ function createShopierPaymentRouter({ store, fulfillPayment, resolveDraftFromPay
         await store.updateById(draft.id, {
           checkoutStartedAt: new Date().toISOString(),
         });
+      }
 
-        checkoutInput = buildPayloadFromDraft(draft, {
-          ...body,
-          return_url: body.return_url || body.returnUrl,
-          callback_url: body.callback_url || body.callbackUrl,
+      if (process.env.NODE_ENV === 'production' && !(process.env.SHOPIER_PRODUCT_ID || '').trim()) {
+        return res.status(503).json({
+          error: 'SHOPIER_PRODUCT_ID is required. Create one digital product in Shopier and add its id to Render.',
         });
       }
 
-      const result = await initializePayment(checkoutInput);
+      const result = await createPaymentRequest({ draftId });
+
+      if (store?.updateById) {
+        await store.updateById(draftId, {
+          shopierProductId: result.product_id || result.productId,
+        });
+      }
 
       return res.status(200).json({
         ok: true,
@@ -72,20 +78,11 @@ function createShopierPaymentRouter({ store, fulfillPayment, resolveDraftFromPay
         checkout_html: result.checkout_html,
         checkoutHtml: result.checkout_html,
         redirect_via: result.redirect_via || 'checkout_html',
-        draftId: checkoutInput.buyer_id || body.draftId || null,
+        draftId,
       });
     } catch (err) {
       console.error('[payment/initialize]', err);
-
-      if (err instanceof ShopierApiError) {
-        const status = err.status && err.status >= 400 && err.status < 600 ? err.status : 400;
-        return res.status(status).json({
-          error: err.message,
-          details: process.env.NODE_ENV === 'production' ? undefined : err.body,
-        });
-      }
-
-      return res.status(500).json({ error: 'Payment initialization failed.' });
+      return res.status(500).json({ error: err.message || 'Payment initialization failed.' });
     }
   });
 

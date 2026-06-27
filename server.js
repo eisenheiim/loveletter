@@ -6,9 +6,7 @@ const fs = require('fs');
 const multer = require('multer');
 const store = require('./lib/store');
 const { generateSiteId } = require('./lib/generateId');
-const { resolveDraftFromPayment, isPaymentConfigured, testShopierConnection, deleteShopierProduct, findPaidOrderForDraft } = require('./lib/shopier');
-const { initializePayment, buildPayloadFromDraft, ShopierApiError } = require('./lib/shopier-rest');
-const { getCheckoutPaymentTemplate } = require('./lib/mode');
+const { resolveDraftFromPayment, isPaymentConfigured, testShopierConnection, findPaidOrderForDraft, createPaymentRequest, getSharedProductIdSync, deleteShopierProduct } = require('./lib/shopier');
 const { createShopierPaymentRouter, createShopierWebhookHandler } = require('./routes/shopierPayment');
 const { generateQrForSite, buildWhatsAppShareUrl } = require('./lib/qr');
 const { renderSurprisePage } = require('./lib/renderSurprise');
@@ -46,7 +44,11 @@ async function fulfillPayment(draftId, shopierPaymentId) {
   const { relativePath } = await generateQrForSite(draftId, BASE_URL);
   const updated = await store.updateById(draftId, { qrCodePath: relativePath });
 
-  if (site.shopierProductId) {
+  const sharedProductId = getSharedProductIdSync();
+  if (
+    site.shopierProductId &&
+    (!sharedProductId || String(site.shopierProductId) !== String(sharedProductId))
+  ) {
     deleteShopierProduct(site.shopierProductId).catch((err) => {
       console.warn('[shopier] post-payment product cleanup failed', site.shopierProductId, err.message);
     });
@@ -205,12 +207,12 @@ app.post(
 );
 
 /**
- * POST /api/pay — Shopier checkout via payment/trigger (dynamic line items).
+ * POST /api/pay — Shopier checkout via one shared catalog product.
  */
 app.post('/api/pay', async (req, res) => {
   try {
     const body = req.body || {};
-    const { draftId, buyerEmail, buyerPhone, items, total_amount, totalAmount, currency } = body;
+    const { draftId, buyerEmail, buyerPhone } = body;
 
     if (!draftId) {
       return res.status(400).json({ error: 'draftId is required.' });
@@ -254,33 +256,20 @@ app.post('/api/pay', async (req, res) => {
       });
     }
 
+    if (process.env.NODE_ENV === 'production' && !(process.env.SHOPIER_PRODUCT_ID || '').trim()) {
+      return res.status(503).json({
+        error: 'SHOPIER_PRODUCT_ID is required. Create one digital product in Shopier and add its id to Render.',
+      });
+    }
+
     await store.updateById(draftId, {
       checkoutStartedAt: new Date().toISOString(),
     });
 
-    const template = getCheckoutPaymentTemplate();
-    const paymentItems = Array.isArray(items) && items.length > 0
-      ? items.map((item) => ({
-          ...item,
-          id: item.id || draftId,
-        }))
-      : template.items.map((item) => ({
-          ...item,
-          id: draftId,
-        }));
-
-    const checkoutInput = buildPayloadFromDraft(draft, {
-      ...body,
-      items: paymentItems,
-      total_amount: total_amount ?? totalAmount ?? body.payment?.total_amount,
-      currency: currency ?? body.payment?.currency,
-      return_url: body.return_url || body.returnUrl || `${BASE_URL}/payment-return?draft=${draftId}`,
-    });
-
-    const payment = await initializePayment(checkoutInput);
+    const payment = await createPaymentRequest({ draftId });
 
     await store.updateById(draftId, {
-      shopierProductId: payment.product_id || payment.payment_id,
+      shopierProductId: payment.product_id || payment.productId,
     });
 
     return res.json({
@@ -292,27 +281,28 @@ app.post('/api/pay', async (req, res) => {
       checkoutHtml: payment.checkout_html,
       redirectVia: payment.redirect_via || 'checkout_html',
       payment_id: payment.payment_id,
+      product_id: payment.product_id,
       paymentTotal: getPublicConfig().priceDisplay,
     });
   } catch (err) {
     console.error('[pay]', err);
 
     let message = 'Payment could not be started. Check your Shopier settings.';
-    if (err instanceof ShopierApiError) {
-      message = err.message;
-    } else if (err.message) {
+    if (err.message) {
       if (/denied|403|forbidden/i.test(err.message)) {
         message = 'Shopier access denied. Check SHOPIER_PAT permissions and SHOPIER_SHOP_SLUG.';
       } else if (err.message.includes('401') || err.message.includes('Unauthorized') || err.message.includes('PAT')) {
         message = 'Invalid Shopier PAT. Set SHOPIER_PAT to your Personal Access Token (not Client ID).';
       } else if (err.message.includes('shopSlug') || err.message.includes('shop')) {
         message = 'Invalid shop slug. Check SHOPIER_SHOP_SLUG.';
+      } else if (err.message.includes('SHOPIER_PRODUCT_ID')) {
+        message = err.message;
       } else {
         message = err.message;
       }
     }
 
-    return res.status(err instanceof ShopierApiError && err.status ? err.status : 500).json({ error: message });
+    return res.status(500).json({ error: message });
   }
 });
 
@@ -483,7 +473,12 @@ async function start() {
   await store.connect();
 
   if (isPaymentConfigured()) {
-    console.log('[shopier] Dynamic payment/trigger mode (no catalog product env vars)');
+    const productId = (process.env.SHOPIER_PRODUCT_ID || '').trim();
+    console.log(
+      productId
+        ? `[shopier] Shared product checkout (SHOPIER_PRODUCT_ID=${productId})`
+        : '[shopier] Shared product checkout (SHOPIER_PRODUCT_ID not set — dev may auto-create once)'
+    );
   }
 
   app.listen(PORT, () => {
