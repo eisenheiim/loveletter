@@ -544,10 +544,21 @@
 
   <!-- Checkout loading overlay -->
   <div id="checkout-overlay" role="alertdialog" aria-live="polite" aria-label="Processing checkout">
-    <div class="text-center px-8">
-      <div class="spinner mx-auto mb-5"></div>
+    <div class="text-center px-8 max-w-md mx-auto">
+      <div id="checkout-overlay-spinner" class="spinner mx-auto mb-5"></div>
       <p id="checkout-overlay-title" class="font-serif text-2xl text-cream mb-2">Redirecting to secure checkout&hellip;</p>
       <p id="checkout-overlay-subtitle" class="text-soft-pink/80 text-sm">Payment total: €1.00</p>
+      <div id="checkout-post-pay" class="hidden mt-6 space-y-4">
+        <p class="text-soft-pink/90 text-sm leading-relaxed">
+          Finish payment in the <strong>Shopier</strong> tab. The QR on Shopier is only their app promo — your <strong>heart QR</strong> is on our site.
+        </p>
+        <a id="checkout-success-link" href="#" class="block w-full py-3.5 rounded-full bg-cream text-wine font-medium text-sm shadow-lg hover:opacity-95 transition-opacity">
+          I&rsquo;ve paid — show my heart QR
+        </a>
+        <button type="button" id="checkout-overlay-dismiss" class="text-sm text-soft-pink/70 underline hover:text-soft-pink">
+          Stay on dashboard
+        </button>
+      </div>
     </div>
   </div>
 
@@ -951,29 +962,47 @@
         shopierStatusWrap: document.getElementById('shopier-status-wrap'),
       };
 
+      function isDevQrMode() {
+        return !!(appConfig && appConfig.allowDevQr);
+      }
+
+      function isFreeMode() {
+        return !!(appConfig && appConfig.mode === 'free');
+      }
+
       function applyAppConfig(config) {
         appConfig = config;
+        const free = config.mode === 'free';
 
         if (els.modeBadge) {
-          els.modeBadge.textContent = 'Premium';
+          els.modeBadge.textContent = free ? 'Free' : 'Premium';
         }
         if (els.packageTitle) els.packageTitle.textContent = config.packageTitle;
         if (els.priceLabel) els.priceLabel.textContent = config.priceDisplay || '€1.00';
         if (els.priceNote) {
           els.priceNote.textContent = config.priceNote || 'Payment total: €1.00';
-          els.priceNote.classList.remove('hidden');
+          els.priceNote.classList.toggle('hidden', false);
         }
         if (els.checkoutBtn) {
           els.checkoutBtn.textContent = config.checkoutButton || 'Pay €1.00 & Create Surprise';
+        }
+        if (els.buyerEmailWrap) {
+          els.buyerEmailWrap.classList.toggle('hidden', free);
+        }
+        if (els.shopierStatusWrap && free) {
+          els.shopierStatusWrap.classList.add('hidden');
+        }
+        if (els.premiumHostingItem) {
+          els.premiumHostingItem.classList.toggle('hidden', free);
         }
         if (config.shopSlug) {
           appConfig.shopSlug = config.shopSlug;
         }
         if (els.previewQrBtn) {
-          els.previewQrBtn.classList.toggle('hidden', !config.allowDevQr);
+          els.previewQrBtn.classList.toggle('hidden', free || !config.allowDevQr);
         }
         if (els.previewKeyWrap) {
-          els.previewKeyWrap.classList.toggle('hidden', !config.allowDevQr);
+          els.previewKeyWrap.classList.toggle('hidden', free || !config.allowDevQr);
         }
         if (els.previewKeyHint && config.allowDevQr) {
           els.previewKeyHint.textContent = config.previewKeyRequired
@@ -981,13 +1010,13 @@
             : 'Test mode is on — no preview key needed. Optional: set PREVIEW_SECRET on Render for extra protection.';
         }
         if (els.wizardStep2) {
-          els.wizardStep2.classList.toggle('hidden', !!config.allowDevQr);
+          els.wizardStep2.classList.toggle('hidden', free || !!config.allowDevQr);
         }
         if (els.progressStep2) {
-          els.progressStep2.classList.toggle('hidden', !!config.allowDevQr);
+          els.progressStep2.classList.toggle('hidden', free || !!config.allowDevQr);
         }
 
-        if (config.shopierConfigured) {
+        if (config.shopierConfigured && !free) {
           loadShopierConnectionStatus();
         }
       }
@@ -1070,14 +1099,10 @@
           panel.classList.toggle('active', parseInt(panel.dataset.step, 10) === step);
         });
         updateProgressUI();
-        if (step === 3 && appConfig.shopierConfigured) {
+        if (step === 3 && appConfig.shopierConfigured && !isFreeMode()) {
           loadShopierConnectionStatus();
         }
         window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-
-      function isDevQrMode() {
-        return !!(appConfig && appConfig.allowDevQr);
       }
 
       function validateStep(step) {
@@ -1098,7 +1123,7 @@
             return false;
           }
         }
-        if (step === 2 && !isDevQrMode()) {
+        if (step === 2 && !isDevQrMode() && !isFreeMode()) {
           for (let i = 0; i < 5; i += 1) {
             if (!state.photoFiles[i]) {
               const zone = document.querySelector('[data-upload-index="' + i + '"]');
@@ -1115,7 +1140,7 @@
           if (!validateStep(state.currentStep)) return;
           if (state.currentStep < 3) {
             var nextStep = state.currentStep + 1;
-            if (isDevQrMode() && nextStep === 2) nextStep = 3;
+            if ((isDevQrMode() || isFreeMode()) && nextStep === 2) nextStep = 3;
             showStep(nextStep);
           }
         });
@@ -1125,7 +1150,7 @@
         btn.addEventListener('click', function () {
           if (state.currentStep > 1) {
             var prevStep = state.currentStep - 1;
-            if (isDevQrMode() && prevStep === 2) prevStep = 1;
+            if ((isDevQrMode() || isFreeMode()) && prevStep === 2) prevStep = 1;
             showStep(prevStep);
           }
         });
@@ -1335,11 +1360,49 @@
         }
       }
 
-      function openCheckoutHtml(html) {
-        const win = window.open('', '_self');
+      function resetCheckoutOverlay() {
+        var spinner = document.getElementById('checkout-overlay-spinner');
+        var postPay = document.getElementById('checkout-post-pay');
+        if (spinner) spinner.classList.remove('hidden');
+        if (postPay) postPay.classList.add('hidden');
+      }
+
+      function showPostPaymentOverlay(successUrl) {
+        var spinner = document.getElementById('checkout-overlay-spinner');
+        var postPay = document.getElementById('checkout-post-pay');
+        var link = document.getElementById('checkout-success-link');
+        if (spinner) spinner.classList.add('hidden');
+        setCheckoutOverlayMessage(
+          'Payment tab opened',
+          'Complete checkout on Shopier, then click the button below.'
+        );
+        if (link && successUrl) link.href = successUrl;
+        if (postPay) postPay.classList.remove('hidden');
+        if (els.checkoutOverlay) els.checkoutOverlay.classList.add('visible');
+        if (els.checkoutBtn) els.checkoutBtn.disabled = false;
+      }
+
+      function openCheckoutHtml(html, successUrl) {
+        var win = window.open('about:blank', '_blank');
+        if (!win) {
+          var same = window.open('', '_self');
+          same.document.open();
+          same.document.write(html);
+          same.document.close();
+          return;
+        }
         win.document.open();
         win.document.write(html);
         win.document.close();
+        if (successUrl) showPostPaymentOverlay(successUrl);
+      }
+
+      var overlayDismiss = document.getElementById('checkout-overlay-dismiss');
+      if (overlayDismiss) {
+        overlayDismiss.addEventListener('click', function () {
+          resetCheckoutOverlay();
+          if (els.checkoutOverlay) els.checkoutOverlay.classList.remove('visible');
+        });
       }
 
       function setCheckoutOverlayMessage(main, sub) {
@@ -1416,17 +1479,33 @@
           showStep(1);
           return;
         }
-        if (!isDevQrMode() && !validateStep(2)) {
+        if (!isDevQrMode() && !isFreeMode() && !validateStep(2)) {
           showStep(2);
           return;
         }
 
         els.checkoutOverlay.classList.add('visible');
-        setCheckoutOverlayMessage('Saving your surprise…', 'Payment total: €1.00');
         els.checkoutBtn.disabled = true;
 
         try {
           const draftData = await createDraftForCheckout();
+
+          if (isFreeMode()) {
+            setCheckoutOverlayMessage('Creating your surprise…', 'Generating your heart QR');
+            const publishRes = await fetch(API_BASE + '/api/publish-free', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ draftId: draftData.draftId }),
+            });
+            const publishData = await parseJsonResponse(publishRes);
+            if (!publishRes.ok) {
+              throw new Error(publishData.error || 'Could not publish your surprise');
+            }
+            window.location.href = publishData.successUrl;
+            return;
+          }
+
+          setCheckoutOverlayMessage('Saving your surprise…', 'Payment total: €1.00');
 
           setCheckoutOverlayMessage(
             'Redirecting to secure checkout…',
@@ -1485,13 +1564,14 @@
           }
 
           if (payData.checkoutHtml) {
-            openCheckoutHtml(payData.checkoutHtml);
+            openCheckoutHtml(payData.checkoutHtml, payData.successUrl);
             return;
           }
 
           var checkoutTarget = payData.payment_url || payData.checkoutUrl;
           if (checkoutTarget && !isShopProfileCheckoutUrl(checkoutTarget)) {
-            window.location.href = checkoutTarget;
+            window.open(checkoutTarget, '_blank');
+            if (payData.successUrl) showPostPaymentOverlay(payData.successUrl);
             return;
           }
 

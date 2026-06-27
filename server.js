@@ -10,7 +10,7 @@ const { resolveDraftFromPayment, isPaymentConfigured, testShopierConnection, fin
 const { createShopierPaymentRouter, createShopierWebhookHandler } = require('./routes/shopierPayment');
 const { generateQrForSite, buildWhatsAppShareUrl } = require('./lib/qr');
 const { renderSurprisePage } = require('./lib/renderSurprise');
-const { getAppMode, getPublicConfig, isDevQrAllowed } = require('./lib/mode');
+const { getAppMode, getPublicConfig, isDevQrAllowed, isFreeMode } = require('./lib/mode');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -31,7 +31,7 @@ app.use((req, res, next) => {
 app.use('/uploads', express.static(path.join(ROOT, 'uploads')));
 
 /* fulfillPayment is hoisted for webhook + pay routes */
-async function fulfillPayment(draftId, shopierPaymentId) {
+async function fulfillPayment(draftId, shopierPaymentId, options = {}) {
   const site = await store.findById(draftId);
   if (!site) return null;
 
@@ -40,6 +40,11 @@ async function fulfillPayment(draftId, shopierPaymentId) {
   }
 
   await store.markPaid(draftId, { shopierPaymentId });
+
+  const plan = options.plan || site.plan || getAppMode();
+  if (plan) {
+    await store.updateById(draftId, { plan });
+  }
 
   const { relativePath } = await generateQrForSite(draftId, BASE_URL);
   const updated = await store.updateById(draftId, { qrCodePath: relativePath });
@@ -207,9 +212,59 @@ app.post(
 );
 
 /**
+ * POST /api/publish-free — generate QR immediately (APP_MODE=free only).
+ */
+app.post('/api/publish-free', async (req, res) => {
+  if (!isFreeMode()) {
+    return res.status(403).json({
+      error: 'Free mode is disabled. Set APP_MODE=free on Render to enable direct QR publishing.',
+    });
+  }
+
+  const draftId = req.body?.draftId;
+  if (!draftId) {
+    return res.status(400).json({ error: 'draftId is required.' });
+  }
+
+  const draft = await store.findById(draftId);
+  if (!draft) {
+    return res.status(404).json({ error: 'Draft not found.' });
+  }
+
+  if (draft.isPaid && draft.qrCodePath) {
+    return res.json({
+      alreadyPublished: true,
+      draftId,
+      successUrl: `${BASE_URL}/success/${draftId}`,
+      siteUrl: `${BASE_URL}/s/${draftId}`,
+      qrCodeUrl: `${BASE_URL}/${draft.qrCodePath}`,
+    });
+  }
+
+  try {
+    await fulfillPayment(draftId, `free-${Date.now()}`, { plan: 'free' });
+    return res.json({
+      ok: true,
+      draftId,
+      mode: 'free',
+      successUrl: `${BASE_URL}/success/${draftId}`,
+    });
+  } catch (err) {
+    console.error('[publish-free]', err);
+    return res.status(500).json({ error: 'Could not publish your surprise.' });
+  }
+});
+
+/**
  * POST /api/pay — Shopier checkout via one shared catalog product.
  */
 app.post('/api/pay', async (req, res) => {
+  if (isFreeMode()) {
+    return res.status(403).json({
+      error: 'Payments are disabled in free mode. Use Create & Get QR or set APP_MODE=paid on Render.',
+    });
+  }
+
   try {
     const body = req.body || {};
     const { draftId, buyerEmail, buyerPhone } = body;
@@ -370,7 +425,7 @@ app.get('/api/success/:id', async (req, res) => {
   let site = await store.findById(req.params.id);
   if (!site) return res.status(404).json({ error: 'Not found' });
 
-  if (!site.isPaid && isPaymentConfigured()) {
+  if (!site.isPaid && isPaymentConfigured() && !isFreeMode()) {
     const match = await findPaidOrderForDraft(site);
     if (match?.orderId) {
       site = await fulfillPayment(site.id, match.orderId);
@@ -486,7 +541,7 @@ async function start() {
     console.log(`\n  Valentine Surprise server running`);
     console.log(`  Local:   ${BASE_URL}`);
     console.log(`  Storage: ${store.mode}`);
-    console.log(`  Mode:    ${config.mode} (${config.priceDisplay})`);
+    console.log(`  Mode:    ${config.mode}${config.mode === 'paid' ? ` (${config.priceDisplay})` : ' — direct QR'}`);
     console.log(`  Shopier: ${isPaymentConfigured() ? 'payment ready' : 'payment not configured'}\n`);
   });
 }

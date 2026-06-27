@@ -10,7 +10,10 @@
 <body class="flex items-center justify-center p-6 text-center">
   <div class="max-w-sm">
     <h1 class="text-2xl text-[#7f0a1e] mb-3">Payment received</h1>
-    <p class="text-[#9b1b30]/70 text-sm mb-6">Your surprise page is being prepared. You will be redirected to your QR code in a few seconds…</p>
+    <p id="status" class="text-[#9b1b30]/70 text-sm mb-6">Preparing your heart-shaped QR code&hellip;</p>
+    <a id="qr-link" href="#" class="hidden block w-full py-3 rounded-full bg-gradient-to-r from-red-500 to-red-800 text-white font-medium text-sm mb-3">
+      Show my heart QR
+    </a>
     <a href="/dashboard.html" class="text-sm text-red-700 underline">Back to dashboard</a>
   </div>
   <script>
@@ -23,11 +26,22 @@
         params.get('id') ||
         sessionStorage.getItem('valentine_draft_id');
 
-      if (draftId && /^v2026-[a-f0-9]+$/i.test(draftId)) {
-        setTimeout(function () {
-          location.href = '/success/' + encodeURIComponent(draftId);
-        }, 2000);
+      var status = document.getElementById('status');
+      var link = document.getElementById('qr-link');
+
+      function goSuccess(id) {
+        location.href = '/success/' + encodeURIComponent(id);
       }
+
+      if (draftId && /^v2026-[a-f0-9]+$/i.test(draftId)) {
+        link.href = '/success/' + encodeURIComponent(draftId);
+        link.classList.remove('hidden');
+        setTimeout(function () { goSuccess(draftId); }, 2000);
+        return;
+      }
+
+      status.textContent =
+        'Open the dashboard in this browser (same tab you paid from) and click “I’ve paid — show my heart QR”.';
     })();
   </script>
 </body>
