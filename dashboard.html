@@ -1010,10 +1010,10 @@
             : 'Test mode is on — no preview key needed. Optional: set PREVIEW_SECRET on Render for extra protection.';
         }
         if (els.wizardStep2) {
-          els.wizardStep2.classList.toggle('hidden', free || !!config.allowDevQr);
+          els.wizardStep2.classList.toggle('hidden', !!config.allowDevQr);
         }
         if (els.progressStep2) {
-          els.progressStep2.classList.toggle('hidden', free || !!config.allowDevQr);
+          els.progressStep2.classList.toggle('hidden', !!config.allowDevQr);
         }
 
         if (config.shopierConfigured && !free) {
@@ -1123,7 +1123,7 @@
             return false;
           }
         }
-        if (step === 2 && !isDevQrMode() && !isFreeMode()) {
+        if (step === 2 && !isDevQrMode()) {
           for (let i = 0; i < 5; i += 1) {
             if (!state.photoFiles[i]) {
               const zone = document.querySelector('[data-upload-index="' + i + '"]');
@@ -1140,7 +1140,7 @@
           if (!validateStep(state.currentStep)) return;
           if (state.currentStep < 3) {
             var nextStep = state.currentStep + 1;
-            if ((isDevQrMode() || isFreeMode()) && nextStep === 2) nextStep = 3;
+            if (isDevQrMode() && nextStep === 2) nextStep = 3;
             showStep(nextStep);
           }
         });
@@ -1150,7 +1150,7 @@
         btn.addEventListener('click', function () {
           if (state.currentStep > 1) {
             var prevStep = state.currentStep - 1;
-            if ((isDevQrMode() || isFreeMode()) && prevStep === 2) prevStep = 1;
+            if (isDevQrMode() && prevStep === 2) prevStep = 1;
             showStep(prevStep);
           }
         });
@@ -1479,7 +1479,7 @@
           showStep(1);
           return;
         }
-        if (!isDevQrMode() && !isFreeMode() && !validateStep(2)) {
+        if (!isDevQrMode() && !validateStep(2)) {
           showStep(2);
           return;
         }
